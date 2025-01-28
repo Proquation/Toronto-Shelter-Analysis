@@ -3,6 +3,11 @@ title: "pre-processing"
 output: html_document
 ---
 
+# Load Libraries
+```{r}
+library(tidyverse)
+```
+
 # Load Data
 ```{r}
 data <- readRDS("alloccupancy.rds")
