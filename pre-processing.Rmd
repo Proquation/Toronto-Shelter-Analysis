@@ -1,0 +1,89 @@
+---
+title: "pre-processing"
+output: html_document
+---
+
+# Load Data
+```{r}
+data <- readRDS("alloccupancy.rds")
+```
+
+# Convert Date
+```{r}
+data$OCCUPANCY_DATE = as.Date(data$OCCUPANCY_DATE)
+data <- data %>%
+  mutate(OCCUPANCY_DATE = str_replace(OCCUPANCY_DATE, "^00", "20")) %>%
+  mutate(OCCUPANCY_DATE = as.Date(OCCUPANCY_DATE))
+```
+
+# Separate Room-based and Bed-based Shelters
+```{r}
+# Separate based on room or bed
+shelter_bed_based = filter(data, CAPACITY_TYPE == 'Bed Based Capacity')
+shelter_room_based = filter(data, CAPACITY_TYPE == 'Room Based Capacity')
+
+# Remove unnecessary columns
+shelter_bed_based <- shelter_bed_based %>% select(-contains("ROOM"))
+shelter_room_based <- shelter_room_based %>% select(-contains("BED"))
+```
+
+# Get top 5 shelther-location pairs
+```{r}
+# Top 5 bed-based shelter-location pairs
+top_5_bed_based = shelter_bed_based %>%
+  group_by(SHELTER_ID, LOCATION_ID) %>%
+  summarise(count = n(), .groups='drop') %>%
+  arrange(desc(count)) %>%
+  slice_max(order_by=count, n=5) %>%
+  mutate(shelter_location_pair = paste(as.character(SHELTER_ID),
+                                       "-",
+                                       as.character(LOCATION_ID)))
+# Top 5 room-based shelter-location pairs
+top_5_room_based = shelter_room_based %>%
+  group_by(SHELTER_ID, LOCATION_ID) %>%
+  summarise(count = n(), .groups='drop') %>%
+  arrange(desc(count)) %>%
+  slice_max(order_by=count, n=5) %>%
+  mutate(shelter_location_pair = paste(as.character(SHELTER_ID),
+                                       "-",
+                                       as.character(LOCATION_ID)))
+
+# Turn top 5 bed-based shelter data into df
+top_5_bed_based_df = shelter_bed_based %>%
+  mutate(shelter_location_pair = paste(as.character(SHELTER_ID),
+                                       "-",
+                                       as.character(LOCATION_ID))) %>%
+  filter(shelter_location_pair %in% top_5_bed_based$shelter_location_pair) %>%
+  summarise(capacity_actual_sum = sum(CAPACITY_ACTUAL_BED),
+            capacity_funding_sum = sum(CAPACITY_FUNDING_BED),
+            occupied_sum = sum(OCCUPIED_BEDS),
+            unoccupied_sum = capacity_actual_sum - occupied_sum,
+            unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+            occupancy_rate = occupied_sum / capacity_actual_sum,
+            .by = c(OCCUPANCY_DATE, shelter_location_pair))
+
+# Turn top 5 room-based shelter data into df
+top_5_room_based_df = shelter_room_based %>%
+  mutate(shelter_location_pair = paste(as.character(SHELTER_ID),
+                                       "-",
+                                       as.character(LOCATION_ID))) %>%
+  filter(shelter_location_pair %in% top_5_room_based$shelter_location_pair) %>%
+  summarise(capacity_actual_sum = sum(CAPACITY_ACTUAL_ROOM),
+            capacity_funding_sum = sum(CAPACITY_FUNDING_ROOM),
+            occupied_sum = sum(OCCUPIED_ROOMS),
+            unoccupied_sum = capacity_actual_sum - occupied_sum,
+            unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+            occupancy_rate = occupied_sum / capacity_actual_sum,
+            .by = c(OCCUPANCY_DATE, shelter_location_pair))
+
+# Drop unnecessary variables
+rm(top_5_bed_based)
+rm(top_5_room_based)
+```
+
+# Save data into csv format
+```{r}
+write.csv(top_5_bed_based_df, "top_5_bed_based_shelters.csv")
+write.csv(top_5_room_based_df, "top_5_room_based_shelters.csv")
+```
+
