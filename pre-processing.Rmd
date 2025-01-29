@@ -86,9 +86,19 @@ rm(top_5_bed_based)
 rm(top_5_room_based)
 ```
 
-# Save data into csv format
 ```{r}
-write.csv(top_5_bed_based_df, "top_5_bed_based_shelters.csv")
-write.csv(top_5_room_based_df, "top_5_room_based_shelters.csv")
+# Add 1 to capacity_actual for rows that had occupancy_rate > 1
+top_5_room_based_df = top_5_room_based_df %>%
+  mutate(capacity_actual_sum = if_else(occupancy_rate > 1,
+                                       capacity_actual_sum + 1,
+                                       capacity_actual_sum)) %>%
+  summarise(unoccupied_sum = capacity_actual_sum - occupied_sum,
+            occupancy_rate = occupied_sum / capacity_actual_sum,
+            .by = c(OCCUPANCY_DATE, shelter_location_pair))
 ```
 
+# Save data into csv format
+```{r}
+write.csv(top_5_bed_based_df, "top_5_bed_based_shelters.csv", row.names = FALSE)
+write.csv(top_5_room_based_df, "top_5_room_based_shelters.csv", row.names=FALSE)
+```
