@@ -9,11 +9,11 @@ top_5_bed_based_df <- read.csv("top_5_bed_based_shelters.csv")
 top_5_room_based_df <- read.csv("top_5_room_based_shelters.csv")
 ```
 
-# Room based
+# Room based ACF & PACF
 ```{r}
 for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
   tryCatch({
-    acf_data <- top_5_room_based_df %>%
+    corr_data <- top_5_room_based_df %>%
       filter(shelter_location_pair == pairing) %>%
       mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
       group_by(year_week) %>%
@@ -24,23 +24,26 @@ for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
       ungroup() %>%
       select(Occupancy_Room) %>%
       pull()
-
-    acf_result <- acf(acf_data, lag.max = 10000, plot = FALSE)
+    
+    par(mfrow = c(1, 2))
+    
+    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
     plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    
+    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    
   }, error = function(e) {
     message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
-  })
+ })
 }
 ```
 
-# Bed based
+# Bed based ACF & PACF
 ```{r}
-
-#print(unique(top_5_bed_based_df$shelter_location_pair))
-
 for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
   tryCatch({
-    acf_data <- top_5_bed_based_df %>%
+    corr_data <- top_5_bed_based_df %>%
       filter(shelter_location_pair == pairing) %>%
       mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
       group_by(year_week) %>%
@@ -51,9 +54,15 @@ for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
       ungroup() %>%
       select(Occupancy_Bed) %>%
       pull()
-
-    acf_result <- acf(acf_data, lag.max = 10000, plot = FALSE)
+    
+    par(mfrow = c(1, 2))
+    
+    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
     plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    
+    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    
   }, error = function(e) {
     message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
  })
