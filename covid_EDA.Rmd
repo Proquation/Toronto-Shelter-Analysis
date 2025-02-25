@@ -1,0 +1,80 @@
+---
+title: "data_exploration"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+# Read data
+covid_data = read.csv("other data/covid19-download.csv")
+bed = read.csv("top_5_bed_based_shelters.csv")
+room = read.csv("top_5_room_based_shelters.csv")
+```
+
+```{r}
+# Aggregate room data by week
+room_yr_week = room %>%
+  filter(OCCUPANCY_DATE >= "2021-01-03" & OCCUPANCY_DATE <= "2024-09-21") %>%
+  mutate(
+    start_of_year = as.Date(paste0(year(OCCUPANCY_DATE), "-01-03")),  # Define Jan 3rd as start
+    week_of_year = as.integer(difftime(OCCUPANCY_DATE, start_of_year, units = "days") / 7) + 1,
+    year_week = paste0(year(OCCUPANCY_DATE), sprintf("%02d", week_of_year))
+  ) %>%
+  summarise(
+    capacity_actual_sum = sum(capacity_actual_sum),
+    capacity_funding_sum = sum(capacity_funding_sum),
+    occupied_sum = sum(occupied_sum),
+    unoccupied_sum = capacity_actual_sum - occupied_sum,
+    unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+    occupancy_rate = occupied_sum / capacity_actual_sum,
+    .by = c(year_week, shelter_location_pair)
+  )
+
+# Aggregate bed data by week
+bed_yr_week = bed %>%
+  filter(OCCUPANCY_DATE >= "2021-01-03" & OCCUPANCY_DATE <= "2024-09-21") %>%
+  mutate(
+    start_of_year = as.Date(paste0(year(OCCUPANCY_DATE), "-01-03")),  # Define Jan 3rd as start
+    week_of_year = as.integer(difftime(OCCUPANCY_DATE, start_of_year, units = "days") / 7) + 1,
+    year_week = paste0(year(OCCUPANCY_DATE), sprintf("%02d", week_of_year))
+  ) %>%
+  summarise(
+    capacity_actual_sum = sum(capacity_actual_sum),
+    capacity_funding_sum = sum(capacity_funding_sum),
+    occupied_sum = sum(occupied_sum),
+    unoccupied_sum = capacity_actual_sum - occupied_sum,
+    unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+    occupancy_rate = occupied_sum / capacity_actual_sum,
+    .by = c(year_week, shelter_location_pair)
+  )
+```
+
+```{r}
+# Add year_week to covid data
+ modified_covid_data = covid_data %>%
+  filter(date >= "2021-01-03" & date <= "2024-09-21") %>%
+  mutate(year_week = if_else(
+    reporting_week < 10,
+    paste0(as.character(reporting_year), "0", as.character(reporting_week)),
+    paste0(as.character(reporting_year), as.character(reporting_week))
+  )) %>%
+  filter(prname == "Ontario")
+
+# Combine room and bed data with covid data
+covid_with_beds = merge(
+  x = bed_yr_week,
+  y = modified_covid_data,
+  by = 'year_week'
+)
+
+covid_with_rooms = merge(
+  x = room_yr_week,
+  y = modified_covid_data,
+  by = 'year_week'
+)
+```
+
