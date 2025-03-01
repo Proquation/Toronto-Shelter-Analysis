@@ -91,10 +91,13 @@ rm(top_5_room_based)
 top_5_room_based_df = top_5_room_based_df %>%
   mutate(capacity_actual_sum = if_else(occupancy_rate > 1,
                                        capacity_actual_sum + 1,
-                                       capacity_actual_sum)) %>%
-  summarise(unoccupied_sum = capacity_actual_sum - occupied_sum,
-            occupancy_rate = occupied_sum / capacity_actual_sum,
-            .by = c(OCCUPANCY_DATE, shelter_location_pair))
+                                       capacity_actual_sum),
+         capacity_funding_sum = capacity_funding_sum,
+         occupied_sum = occupied_sum,
+         unoccupied_sum = capacity_actual_sum - occupied_sum,
+         unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+         occupancy_rate = occupied_sum / capacity_actual_sum,
+         .by = c(OCCUPANCY_DATE, shelter_location_pair))
 ```
 
 # Save data into csv format
