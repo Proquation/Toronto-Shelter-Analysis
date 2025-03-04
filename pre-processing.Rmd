@@ -6,6 +6,7 @@ output: html_document
 # Load Libraries
 ```{r}
 library(tidyverse)
+library(ggplot2)
 ```
 
 # Load Data
@@ -86,6 +87,7 @@ rm(top_5_bed_based)
 rm(top_5_room_based)
 ```
 
+# Removing room occupancy rate > 1
 ```{r}
 # Add 1 to capacity_actual for rows that had occupancy_rate > 1
 top_5_room_based_df = top_5_room_based_df %>%
@@ -98,6 +100,77 @@ top_5_room_based_df = top_5_room_based_df %>%
          unavailable_sum = capacity_funding_sum - capacity_actual_sum,
          occupancy_rate = occupied_sum / capacity_actual_sum,
          .by = c(OCCUPANCY_DATE, shelter_location_pair))
+```
+
+# Removing bed occupancy rate > 1
+```{r}
+# Add 1 to capacity_actual for rows that had occupancy_rate > 1
+top_5_bed_based_df = top_5_bed_based_df %>%
+  mutate(capacity_actual_sum = if_else(occupancy_rate > 1,
+                                       capacity_actual_sum + 1,
+                                       capacity_actual_sum),
+         capacity_funding_sum = capacity_funding_sum,
+         occupied_sum = occupied_sum,
+         unoccupied_sum = capacity_actual_sum - occupied_sum,
+         unavailable_sum = capacity_funding_sum - capacity_actual_sum,
+         occupancy_rate = occupied_sum / capacity_actual_sum,
+         .by = c(OCCUPANCY_DATE, shelter_location_pair))
+```
+
+# Plotting the time series data for weekly averages of rooms
+```{r}
+for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
+  
+  corr_data <- top_5_room_based_df %>%
+    filter(shelter_location_pair == pairing) %>%
+    mutate(year_week = format(as.Date(OCCUPANCY_DATE), "%Y-%V")) %>%
+    group_by(year_week) %>%
+    summarise(Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)) %>%
+    arrange(year_week)
+  
+  # year_week as factor for plotting
+  corr_data$year_week <- as.factor(corr_data$year_week)
+  
+  # Plot time series
+  p <- ggplot(corr_data, aes(x = year_week, y = Occupancy_Room, group = 1)) +
+    geom_line(color = "blue") +
+    geom_point(color = "red") +
+    ggtitle(paste("Occupancy Rate for", pairing)) +
+    xlab("Year-Week") +
+    ylab("Avg Weekly Occupancy Rate") +
+    theme_minimal()
+
+  print(p)
+}
+```
+
+# Plotting the time series data for weekly averages of beds
+```{r}
+for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
+  
+  # Process data for each shelter-location pair
+  corr_data <- top_5_bed_based_df %>%
+    filter(shelter_location_pair == pairing) %>%
+    mutate(year_week = format(as.Date(OCCUPANCY_DATE), "%Y-%V")) %>%
+    group_by(year_week) %>%
+    summarise(Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)) %>%
+    arrange(year_week)
+  
+  # year_week as factor for plotting
+  corr_data$year_week <- as.factor(corr_data$year_week)
+  
+  # Plot time series
+  p <- ggplot(corr_data, aes(x = year_week, y = Occupancy_Bed, group = 1)) +
+    geom_line(color = "blue") +
+    geom_point(color = "red") +
+    ggtitle(paste("Occupancy Rate for", pairing)) +
+    xlab("Year-Week") +
+    ylab("Avg Weekly Occupancy Rate") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+  print(p)
+}
 ```
 
 # Save data into csv format
