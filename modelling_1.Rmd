@@ -55,7 +55,7 @@ FIRST ROOM SHELTER:LOCATION
 Trying a SARIMA model
 ```{r}
 print(unique(top_5_room_based_df$shelter_location_pair))
-pairing_1 <- top_5_room_based_df$shelter_location_pair[1]
+pairing_1 <- unique(top_5_room_based_df$shelter_location_pair)[1]
 
 corr_data_1 <- top_5_room_based_df %>%
       dplyr::filter(shelter_location_pair == pairing_1) %>%
@@ -142,7 +142,7 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_1)
 ```
 
 Attempt at making a SSM class model
@@ -198,8 +198,7 @@ plot(predvec)
 
 SECOND ROOM SHELTER:LOCATION
 ```{r}
-print(unique(top_5_room_based_df$shelter_location_pair))
-pairing_2 <- top_5_room_based_df$shelter_location_pair[2]
+pairing_2 <- unique(top_5_room_based_df$shelter_location_pair)[2]
 
 corr_data_2 <- top_5_room_based_df %>%
       dplyr::filter(shelter_location_pair == pairing_2) %>%
@@ -283,14 +282,14 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_3)
 ```
 
 THIRD ROOM SHELTER:LOCATION
 
 ```{r}
 print(unique(top_5_room_based_df$shelter_location_pair))
-pairing_3 <- top_5_room_based_df$shelter_location_pair[3]
+pairing_3 <- unique(top_5_room_based_df$shelter_location_pair)[3]
 
 corr_data_3 <- top_5_room_based_df %>%
       dplyr::filter(shelter_location_pair == pairing_3) %>%
@@ -373,14 +372,14 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_3)
 ```
 
 FOURTH ROOM SHELTER:LOCATION
 
 ```{r}
-print(unique(top_5_room_based_df$shelter_location_pair))
-pairing_4 <- top_5_room_based_df$shelter_location_pair[4]
+pairing_4 <- unique(top_5_room_based_df$shelter_location_pair)[4]
+print(pairing_4)
 
 corr_data_4 <- top_5_room_based_df %>%
       dplyr::filter(shelter_location_pair == pairing_4) %>%
@@ -468,14 +467,14 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_4)
 ```
 
 FIFTH ROOM SHELTER:LOCATION
 High kurtosis, slow decline in acf squared values
 
 ```{r}
-pairing_5 <- top_5_room_based_df$shelter_location_pair[5]
+pairing_5 <- unique(top_5_room_based_df$shelter_location_pair)[5]
 print(pairing_5)
 
 corr_data_5 <- top_5_room_based_df %>%
@@ -563,14 +562,15 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_5)
 ```
+
 EM for Beds
 
 FIRST BED SHELTER:LOCATION
 
 ```{r}
-pairing_1_bed <- top_5_bed_based_df$shelter_location_pair[1]
+pairing_1_bed <- unique(top_5_bed_based_df$shelter_location_pair)[1]
 print(pairing_1_bed)
 
 corr_data_1_bed <- top_5_bed_based_df %>%
@@ -656,12 +656,12 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_1_bed)
 ```
 SECOND BED SHELTER:LOCATION
 
 ```{r}
-pairing_2_bed <- top_5_bed_based_df$shelter_location_pair[2]
+pairing_2_bed <- unique(top_5_bed_based_df$shelter_location_pair)[2]
 print(pairing_2_bed)
 
 corr_data_2_bed <- top_5_bed_based_df %>%
@@ -747,12 +747,12 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_2_bed)
 ```
 THIRD BED SHELTER:LOCATION
 
 ```{r}
-pairing_3_bed <- top_5_bed_based_df$shelter_location_pair[3]
+pairing_3_bed <- unique(top_5_bed_based_df$shelter_location_pair)[3]
 print(pairing_3_bed)
 
 corr_data_3_bed <- top_5_bed_based_df %>%
@@ -838,13 +838,13 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_3_bed)
 ```
 
 FOURTH BED SHELTER:LOCATION
 
 ```{r}
-pairing_4_bed <- top_5_bed_based_df$shelter_location_pair[4]
+pairing_4_bed <- unique(top_5_bed_based_df$shelter_location_pair)[4]
 print(pairing_4_bed)
 
 corr_data_4_bed <- top_5_bed_based_df %>%
@@ -930,12 +930,12 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_4_bed)
 ```
 FIFTH BED SHELTER:LOCATION
 
 ```{r}
-pairing_5_bed <- top_5_bed_based_df$shelter_location_pair[5]
+pairing_5_bed <- unique(top_5_bed_based_df$shelter_location_pair)[5]
 print(pairing_5_bed)
 
 corr_data_5_bed <- top_5_bed_based_df %>%
@@ -1021,7 +1021,7 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em)
+plot(forecasted_em, main = pairing_5_bed)
 ```
 
 Automatic arima for rooms
