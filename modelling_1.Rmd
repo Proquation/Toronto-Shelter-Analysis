@@ -134,8 +134,6 @@ lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
 
 summary(ks)
 
-plot(ks$Pf)
-
 vector <- as.vector(ks$Xp)
 
 time_series <- as.ts(vector, start = 1)
@@ -143,6 +141,17 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_1)
+length(forecasted_em$x)
+length(forecasted_em$mean)
+attributes(forecasted_em)
+
+plot(forecasted_em$mean)
+plot(forecasted_em$residuals)
+
+hist(as.numeric(unlist(forecasted_em$x)))
+hist(forecasted_em$mean)
+
+
 ```
 
 Attempt at making a SSM class model
@@ -282,7 +291,9 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_3)
+plot(forecasted_em, main = pairing_2)
+
+hist(forecasted_em$mean)
 ```
 
 THIRD ROOM SHELTER:LOCATION
@@ -373,6 +384,8 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_3)
+
+hist(forecasted_em$mean)
 ```
 
 FOURTH ROOM SHELTER:LOCATION
@@ -468,6 +481,9 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_4)
+
+
+hist(forecasted_em$mean)
 ```
 
 FIFTH ROOM SHELTER:LOCATION
@@ -563,6 +579,8 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_5)
+
+hist(forecasted_em$mean)
 ```
 
 EM for Beds
@@ -657,6 +675,9 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_1_bed)
+
+
+hist(forecasted_em$mean)
 ```
 SECOND BED SHELTER:LOCATION
 
@@ -748,6 +769,9 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_2_bed)
+
+
+hist(forecasted_em$mean)
 ```
 THIRD BED SHELTER:LOCATION
 
@@ -839,6 +863,9 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_3_bed)
+
+
+hist(forecasted_em$mean)
 ```
 
 FOURTH BED SHELTER:LOCATION
@@ -931,6 +958,8 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_4_bed)
+
+hist(forecasted_em$mean)
 ```
 FIFTH BED SHELTER:LOCATION
 
@@ -1022,6 +1051,8 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 plot(forecasted_em, main = pairing_5_bed)
+
+hist(forecasted_em$mean)
 ```
 
 Automatic arima for rooms
