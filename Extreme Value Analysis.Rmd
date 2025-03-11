@@ -69,7 +69,7 @@ Determine our own cutoffs instead of the default boxplot cutoff of $Q1 - 1.5IQR$
 Two versions of cutoffs (for now):
 * 99%
 * Where tail flattens out completely
-```{r histogram of outliers only}
+```{r keep outliers only}
 
 # keep only the outliers
 
@@ -91,8 +91,34 @@ out99.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>%
 
 # with cutoff where it flattens out
 outflat.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
-  filter(occupancy_rate <= .99)
+  filter(occupancy_rate <= .93)
 
 outflat.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
-  filter(occupancy_rate <= .99)
+  filter(occupancy_rate <= .97)
+```
+
+```{r histogram of outliers only}
+#par(mfrow=c(3,2))
+hist(outdef.bed$occupancy_rate)
+hist(outdef.room$occupancy_rate)
+hist(out99.bed$occupancy_rate)
+hist(out99.room$occupancy_rate)
+hist(outflat.bed$occupancy_rate)
+hist(outflat.room$occupancy_rate)
+```
+
+```{r outlier ts plots}
+ts.plot(outdef.bed$occupancy_rate)
+plot(outdef.room$OCCUPANCY_DATE, outdef.room$occupancy_rate, pch=20)
+points(outdef.bed$OCCUPANCY_DATE, outdef.bed$occupancy_rate, pch=20, col="red")
+
+plot(out99.room$OCCUPANCY_DATE, out99.room$occupancy_rate, pch=20)
+points(out99.bed$OCCUPANCY_DATE, out99.bed$occupancy_rate, pch=20, col="red")
+
+plot(outflat.room$OCCUPANCY_DATE, outflat.room$occupancy_rate, pch=20)
+points(outflat.bed$OCCUPANCY_DATE, outflat.bed$occupancy_rate, pch=20, col="red")
+```
+
+```{r ts plots but highlighting gaps}
+
 ```
