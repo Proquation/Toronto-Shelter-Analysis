@@ -1,22 +1,29 @@
 ---
-title: "acf-dataanalysis"
+title: "ACF Data Analysis"
 output: html_document
 ---
-
-# Read top 5 bed and room shelters into dataframe
 ```{r}
+library(tidyverse)
+```
+
+## Read top 5 bed and room shelters into dataframe
+```{r names }
 top_5_bed_based_df <- read.csv("top_5_bed_based_shelters.csv")
 top_5_room_based_df <- read.csv("top_5_room_based_shelters.csv")
 ```
 
-# Room based ACF & PACF
+## Room based ACF & PACF
 ```{r}
+# Plotting ACF & PACF for every room-based shelter occupancy rate
 for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
   tryCatch({
+    # Filtering data
     corr_data <- top_5_room_based_df %>%
       filter(shelter_location_pair == pairing) %>%
+      # Mutates column for weeks
       mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
       group_by(year_week) %>%
+      # Aggregates weekly mean occupancy rate
       summarise(
         Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
       ) %>%
@@ -27,11 +34,11 @@ for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
     
     par(mfrow = c(1, 2))
     
-    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
-    plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    # Plotting ACF for the specific room-based shelter
+    acf_result <- acf(corr_data, lag.max = 100, main = paste("ACF for Organization ID", pairing), cex.main = 0.5)
     
-    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
-    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    # Plotting Partial ACF for the specific room-based shelter
+    pacf_result <- pacf(corr_data, lag.max = 100, main = paste("PACF for Organization ID", pairing), cex.main = 0.5)
     
   }, error = function(e) {
     message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
@@ -39,14 +46,18 @@ for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
 }
 ```
 
-# Bed based ACF & PACF
+## Bed based ACF & PACF
 ```{r}
+# Plotting ACF & PACF for every bed-based shelter occupancy rate
 for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
   tryCatch({
     corr_data <- top_5_bed_based_df %>%
+      # Filtering data
       filter(shelter_location_pair == pairing) %>%
+      # Mutates column for weeks
       mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
       group_by(year_week) %>%
+      # Aggregates weekly mean occupancy rate
       summarise(
         Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)
       ) %>%
@@ -57,11 +68,11 @@ for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
     
     par(mfrow = c(1, 2))
     
-    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
-    plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    # Plotting ACF for the specific bed-based shelter
+    acf_result <- acf(corr_data, lag.max = 100, main = paste("ACF for Organization ID", pairing), cex.main = 0.5)
     
-    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
-    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    # Plotting Partial ACF for the specific bed-based shelter
+    pacf_result <- pacf(corr_data, lag.max = 100, main = paste("PACF for Organization ID", pairing), cex.main = 0.5)
     
   }, error = function(e) {
     message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
