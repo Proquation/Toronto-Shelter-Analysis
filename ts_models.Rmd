@@ -1,0 +1,1049 @@
+---
+title: "Time-series Models"
+output: html_document
+---
+
+```{r libraries}
+library(vars)
+library(TSA)
+library(astsa)
+library(forecast)
+library(tseries)
+library(tidyverse)
+library(fGarch)
+library(KFAS)
+```
+
+# Read top 5 bed and room shelters into dataframe
+
+```{r ingest data}
+top_5_bed_based_df <- read.csv("top_5_bed_based_shelters.csv")
+top_5_room_based_df <- read.csv("top_5_room_based_shelters.csv")
+```
+
+# Checking stationarity with ADF test
+
+The objective of this chunk is to check whether stationarity exists by differencing the occupancy rate.
+```{r stationarity room}
+for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+    
+    corr_data <- diff(corr_data)
+    adf_result <- adf.test(corr_data)
+    print(adf_result)
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+```
+
+```{r stationarity bed}
+for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Bed) %>%
+      pull()
+    
+    corr_data <- diff(corr_data)
+    adf_result <- adf.test(corr_data)
+    print(adf_result)
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+```
+
+# SARIMA for first room shelter:location pair
+
+```{r sarima 1st room}
+print(unique(top_5_room_based_df$shelter_location_pair))
+pairing_1 <- unique(top_5_room_based_df$shelter_location_pair)[1]
+
+corr_data_1 <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_1) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sarima(corr_data_1, 2, 1, 2)
+kurtosis(corr_data_1)
+acf(corr_data_1^2)
+```
+
+# GARCH model for first room shelter:location pair
+
+```{r}
+garch_fit_1_0 <- garchFit(~garch(1, 0), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+plot(garch_fit_1_0@residuals)
+plot(garch_fit_1_0, which = 7)
+#summary(garch_fit_1_0)
+
+garch_fit_1_1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+plot(garch_fit_1_1@residuals)
+plot(garch_fit_1_1, which = 7)
+#summary(garch_fit_1_1)
+```
+
+# Expectation maximization model
+
+This function builds the expectation maximization model with uniform distributions for the matrices and vectors. EM is an iterative way to get the maximum likelihood for the parameters to use for the Kalman Smooth function. 
+```{r, include = FALSE}
+fit_em <- function(data, max.iter = 500, tol = 1e-5){
+  em_fit <- NULL
+  for (i in 1:10) {
+    #' Generate random initial guess
+    #' res is the result of each iteration, with 
+    #' @param corr_data_1 the time series data with occupancy rates
+    #' @param mu0 initial state mean vector 
+    #' @param Sigma0 initial state covariance matrix
+    #' @param Phi state transition matrix
+    #' @param max.iter = maximum iterations for the EM algorithm
+  
+    Sigma0 <- runif(1)
+    Phi <- runif(1)
+    Q <- runif(1)
+    R <- runif(1)
+    mu0 <- runif(1)
+    
+    res <- try(EM(data, 1, mu0, Sigma0, Phi, Q, R,
+                  max.iter = 500, tol = 1e-5))
+    if(inherits(res, "try-error")) {
+      next
+    }
+    
+    em_fit <- EM(data, 1, mu0, Sigma0, Phi, Q, R,
+                 max.iter = 500, tol = 1e-5)
+    break
+  }
+  em_fit
+}
+```
+
+# EM model for first room shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 1st room EM, include = FALSE}
+em_fit <- fit_em(corr_data_1)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+x_t^(t-1) = our current information based on past values. We carry over the generated guesses from our fit to the Ksmooth function. There are no exogenous variables, so no upsilon is needed. This function returns "Xp" the state predictors for our forecasted values.
+
+```{r}
+ks <- Ksmooth(corr_data_1, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_1), corr_data_1, main = "Predict", xlab = "time", ylab = "")
+
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+# Plotting the forecasted EM model 
+plot(forecasted_em, main = pairing_1)
+length(forecasted_em$x)
+length(forecasted_em$mean)
+attributes(forecasted_em)
+
+plot(forecasted_em$mean)
+plot(forecasted_em$residuals)
+
+#hist(as.numeric(unlist(forecasted_em$x)))
+#hist(forecasted_em$mean)
+```
+
+### Attempt at making a SSM class model
+```{r}
+phi <- em_fit$Phi
+Q <- em_fit$Q
+R <- em_fit$R
+mu0 <- em_fit$mu0
+sigma0<- em_fit$Sigma0
+
+
+# ssmodel <- SSModel(
+#   corr_data_1 ~ -1 + SSMcustom(
+#     Z = 1,
+#     T = phi,
+#     R = R,
+#     Q = Q,
+#     a1 = mu0,
+#     P1 = sigma0
+#     
+#   )
+# )
+# 
+# fit <- fitSSM(ssmodel, inits = c(Q, 1), method = "BFGS")
+
+print(phi)
+
+predvec <- c()
+predvec <- c(predvec, phi*ks$Xp[209])
+
+print(ks$Xp[209])
+
+predvec[2] <- phi*predvec[1]
+
+predvec[3] <- phi*predvec[2]
+
+predvec[4] <- phi*predvec[3]
+
+print(predvec)
+
+plot(predvec)
+
+for(i in 2:30){
+  predvec[i] <- phi*predvec[i-1]
+  print(predvec[i])
+}
+
+plot(predvec)
+```
+
+# Loading second room shelter:location pair
+
+```{r}
+pairing_2 <- unique(top_5_room_based_df$shelter_location_pair)[2]
+
+corr_data_2 <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_2) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+#sarima(corr_data_2, 2, 1, 2)
+kurtosis(corr_data_2)
+
+# ACF with squared values
+acf(corr_data_2^2)
+```
+
+# GARCH model for second room shelter:location pair
+
+```{r}
+fit_2 <- garchFit(~garch(1, 0), data = corr_data_2, include.mean = TRUE, cond.dist = "norm")
+plot(fit_2@residuals)
+plot(fit_2, which = 7)
+summary(fit_2)
+
+fit_2.1 <- garchFit(~garch(1, 1), data = corr_data_2, include.mean = TRUE, cond.dist = "norm")
+plot(fit_2.1@residuals)
+plot(fit_2.1, which = 7)
+summary(fit_2.1)
+```
+
+# EM model for second room shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 2nd room EM, include = FALSE}
+em_fit <- fit_em(corr_data_2)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+x_t^(t-1) = our current information based on past values. We carry over the generated guesses from our fit to the Ksmooth function. There are no exogenous variables, so no upsilon is needed. This function returns "Xp" the state predictors for our forecasted values.
+
+```{r}
+ks <- Ksmooth(corr_data_2, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_2), corr_data_2, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_2)
+
+hist(forecasted_em$mean)
+```
+
+# Loading third room shelter:location pair
+
+```{r}
+print(unique(top_5_room_based_df$shelter_location_pair))
+pairing_3 <- unique(top_5_room_based_df$shelter_location_pair)[3]
+
+corr_data_3 <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_3) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+#sarima(corr_data_3, 3, 1, 2)
+kurtosis(corr_data_3)
+acf(corr_data_3^2)
+
+fit_3 <- garchFit(~garch(1, 0), data = corr_data_3, include.mean = TRUE, cond.dist = "norm")
+plot(fit_3@residuals)
+plot(fit_3, which = 7)
+summary(fit_3)
+
+fit_3.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+plot(fit_3.1@residuals)
+plot(fit_3.1, which = 7)
+summary(fit_3.1)
+```
+
+# EM model for third room shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 3rd room EM, include = FALSE}
+em_fit <- fit_em(corr_data_3)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_3, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_3), corr_data_3, main = "Predict", xlab = "time", ylab = "")
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_3)
+
+hist(forecasted_em$mean)
+```
+
+# Loading fourth shelter:location pair
+
+```{r}
+pairing_4 <- unique(top_5_room_based_df$shelter_location_pair)[4]
+print(pairing_4)
+
+corr_data_4 <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_4) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_4), 0, 1)
+
+qqplot(corr_data_4, sample_norm)
+
+# sarima(corr_data_4, 3, 1, 2)
+# kurtosis(corr_data_4)
+# acf(corr_data_4^2)
+# 
+# fit_4 <- garchFit(~garch(1, 0), data = corr_data_4, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_4@residuals)
+# plot(fit_4, which = 7)
+# summary(fit_4)
+# 
+# fit_4.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_4.1@residuals)
+# plot(fit_4.1, which = 7)
+# summary(fit_4.1)
+```
+
+# EM model for fourth shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 4th room EM, include = FALSE}
+em_fit <- fit_em(corr_data_4)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_4, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_4), corr_data_4, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_4)
+
+
+hist(forecasted_em$mean)
+```
+
+# Loading fifth room shelter:location pair
+High kurtosis, slow decline in acf squared values
+
+```{r}
+pairing_5 <- unique(top_5_room_based_df$shelter_location_pair)[5]
+print(pairing_5)
+
+corr_data_5 <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_5) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_5),0,1)
+
+qqplot(corr_data_5, sample_norm)
+```
+
+## SARIMA and GARCH for fifth shelter:location pair
+
+```{r}
+#sarima(corr_data_5, 3, 1, 2)
+# kurtosis(corr_data_5)
+# acf(corr_data_4^2)
+# 
+# fit_5 <- garchFit(~garch(1, 0), data = corr_data_5, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_5@residuals)
+# plot(fit_5, which = 7)
+# summary(fit_5)
+# 
+# fit_5.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_5.1@residuals)
+# plot(fit_5.1, which = 7)
+# summary(fit_5.1)
+```
+
+# EM model for fifth room shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 5th room EM, include = FALSE}
+em_fit <- fit_em(corr_data_5)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_5, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_5), corr_data_5, main = "Predict", xlab = "time", ylab = "")
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_5)
+
+hist(forecasted_em$mean)
+```
+
+# EM for Beds
+
+# Loading first bed shelter:location pair
+
+```{r}
+pairing_1_bed <- unique(top_5_bed_based_df$shelter_location_pair)[1]
+print(pairing_1_bed)
+
+corr_data_1_bed <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_1_bed) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_1_bed),0,1)
+
+qqplot(corr_data_1_bed, sample_norm)
+
+#sarima(corr_data_1_bed, 3, 1, 2)
+# kurtosis(corr_data_1_bed)
+# acf(corr_data_1_bed^2)
+# 
+# fit_1 <- garchFit(~garch(1, 0), data = corr_data_1_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1@residuals)
+# plot(fit_1, which = 7)
+# summary(fit_1)
+# 
+# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1.1@residuals)
+# plot(fit_1.1, which = 7)
+# summary(fit_1.1)
+```
+
+# EM model for first bed shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 1st bed EM, include = FALSE}
+em_fit <- fit_em(corr_data_1_bed)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_1_bed, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_1_bed), corr_data_1_bed, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_1_bed)
+
+
+hist(forecasted_em$mean)
+```
+
+# Loading second bed shelter:location pair
+
+```{r}
+pairing_2_bed <- unique(top_5_bed_based_df$shelter_location_pair)[2]
+print(pairing_2_bed)
+
+corr_data_2_bed <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_2_bed) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_2_bed),0,1)
+
+qqplot(corr_data_2_bed, sample_norm)
+
+#sarima(corr_data_1_bed, 3, 1, 2)
+# kurtosis(corr_data_1_bed)
+# acf(corr_data_1_bed^2)
+# 
+# fit_1 <- garchFit(~garch(1, 0), data = corr_data_1_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1@residuals)
+# plot(fit_1, which = 7)
+# summary(fit_1)
+# 
+# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1.1@residuals)
+# plot(fit_1.1, which = 7)
+# summary(fit_1.1)
+```
+
+# EM model for second bed shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 2nd bed EM, include = FALSE}
+em_fit <- fit_em(corr_data_2_bed)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_2_bed, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_2_bed), corr_data_2_bed, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_2_bed)
+
+
+hist(forecasted_em$mean)
+```
+
+# Loading third bed shelter:location pair
+
+```{r}
+pairing_3_bed <- unique(top_5_bed_based_df$shelter_location_pair)[3]
+print(pairing_3_bed)
+
+corr_data_3_bed <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_3_bed) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_3_bed),0,1)
+
+qqplot(corr_data_3_bed, sample_norm)
+
+#sarima(corr_data_3_bed, 3, 1, 2)
+# kurtosis(corr_data_3_bed)
+# acf(corr_data_3_bed^2)
+# 
+# fit_1 <- garchFit(~garch(1, 0), data = corr_data_3_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1@residuals)
+# plot(fit_1, which = 7)
+# summary(fit_1)
+# 
+# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_3, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1.1@residuals)
+# plot(fit_1.1, which = 7)
+# summary(fit_1.1)
+```
+
+# EM model for third bed shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 3rd bed EM, include = FALSE}
+em_fit <- fit_em(corr_data_3_bed)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_3_bed, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_3_bed), corr_data_3_bed, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_3_bed)
+
+
+hist(forecasted_em$mean)
+```
+
+# Loading fourth bed shelter:location pair
+
+```{r}
+pairing_4_bed <- unique(top_5_bed_based_df$shelter_location_pair)[4]
+print(pairing_4_bed)
+
+corr_data_4_bed <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_4_bed) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_4_bed),0,1)
+
+qqplot(corr_data_4_bed, sample_norm)
+
+#sarima(corr_data_4_bed, 3, 1, 2)
+# kurtosis(corr_data_4_bed)
+# acf(corr_data_4_bed^2)
+# 
+# fit_1 <- garchFit(~garch(1, 0), data = corr_data_4_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1@residuals)
+# plot(fit_1, which = 7)
+# summary(fit_1)
+# 
+# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_4_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1.1@residuals)
+# plot(fit_1.1, which = 7)
+# summary(fit_1.1)
+```
+
+# EM model for fourth bed shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 4th bed EM, include = FALSE}
+em_fit <- fit_em(corr_data_3_bed)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_4_bed, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_4_bed), corr_data_4_bed, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_4_bed)
+
+hist(forecasted_em$mean)
+```
+
+# Loading fifth bed shelter:location pair
+
+```{r}
+pairing_5_bed <- unique(top_5_bed_based_df$shelter_location_pair)[5]
+print(pairing_5_bed)
+
+corr_data_5_bed <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing_5_bed) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+
+sample_norm <- rnorm(length(corr_data_5_bed),0,1)
+
+qqplot(corr_data_5_bed, sample_norm)
+
+#sarima(corr_data_5_bed, 3, 1, 2)
+# kurtosis(corr_data_5_bed)
+# acf(corr_data_5_bed^2)
+# 
+# fit_1 <- garchFit(~garch(1, 0), data = corr_data_5_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1@residuals)
+# plot(fit_1, which = 7)
+# summary(fit_1)
+# 
+# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_5_bed, include.mean = TRUE, cond.dist = "norm")
+# plot(fit_1.1@residuals)
+# plot(fit_1.1, which = 7)
+# summary(fit_1.1)
+```
+
+# EM model for fifth bed shelter:location pair
+
+This chunk computes the fit of the expectation maximization model.
+```{r 5th bed EM, include = FALSE}
+em_fit <- fit_em(corr_data_3_bed)
+
+summary(em_fit)
+
+print(em_fit$Phi)
+```
+
+## Kalman filter
+
+```{r}
+ks <- Ksmooth(corr_data_5_bed, A = 1, mu0 = em_fit$mu0, 
+        Sigma0 = em_fit$Sigma0, Phi = em_fit$Phi,
+        sQ = sqrt(em_fit$Q), sR = sqrt(em_fit$R))
+
+plot(1:length(corr_data_5_bed), corr_data_5_bed, main = "Predict", xlab = "time", ylab = "")
+     #ylim = c(min(em_fit$mu0) - 3, max(em_fit$mu0 + 3)))
+lines(ks$Xp, col = "green")
+lines(ks$Xp + 2*sqrt(ks$Pp), lty = 2, col = "red")
+lines(ks$Xp - 2*sqrt(ks$Pp), lty = 2, col = "blue")
+
+summary(ks)
+
+plot(ks$Pf)
+
+vector <- as.vector(ks$Xp)
+
+time_series <- as.ts(vector, start = 1)
+
+forecasted_em <- forecast(time_series, h = 50)
+
+plot(forecasted_em, main = pairing_5_bed)
+
+hist(forecasted_em$mean)
+```
+
+# Automatic arima for rooms
+```{r}
+for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull()
+    
+    #corr_data <- diff(corr_data)
+    model <- auto.arima(corr_data)
+    print(model)
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+```
+
+# Differencing ACF & PACF for all 5 beds and rooms
+
+## Room based ACF & PACF
+```{r}
+for (pairing in unique(top_5_room_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_room_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Room) %>%
+      pull() %>%
+      diff()
+    
+    par(mfrow = c(1, 2))
+    
+    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    
+    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+
+```
+
+## Bed based ACF & PACF
+
+```{r}
+for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Bed) %>%
+      pull()%>%
+      diff()
+    
+    par(mfrow = c(1, 2))
+    
+    acf_result <- acf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(acf_result, main = paste("ACF for Organization ID", pairing))
+    
+    pacf_result <- pacf(corr_data, lag.max = 10000, plot = FALSE)
+    plot(pacf_result, main = paste("PACF for Organization ID", pairing))
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+```
+```{r}
+for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
+  tryCatch({
+    corr_data <- top_5_bed_based_df %>%
+      dplyr::filter(shelter_location_pair == pairing) %>%
+      mutate(year_week = strftime(OCCUPANCY_DATE, format="%Y%V")) %>%
+      group_by(year_week) %>%
+      summarise(
+        Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)
+      ) %>%
+      arrange(year_week) %>%
+      ungroup() %>%
+      dplyr::select(Occupancy_Bed) %>%
+      pull()%>%
+      diff()
+    
+    par(mfrow = c(1, 2))
+    
+    #auto.arima(corr_data)
+    
+  }, error = function(e) {
+    message(paste("Skipping Pairing IDs", pairing, "due to error:", e$message))
+ })
+}
+```
