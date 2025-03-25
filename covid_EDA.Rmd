@@ -1,41 +1,40 @@
 ---
-title: "data_exploration"
+title: "Exploration of the COVID dataset"
 output: html_document
 ---
 
-```{r}
+## Imports
+```{r Imports}
 library(tidyverse)
 library(lubridate)
+library(plotrix)
+library(vars)
 ```
 
-```{r}
-# Read data
+## Read Data
+```{r Read data}
 covid_data = read.csv("other data/covid19-download.csv")
+covid_description = read.csv("other data/covid19-casesdeaths-data-dictionary.csv")
 bed = read.csv("top_5_bed_based_shelters.csv")
 room = read.csv("top_5_room_based_shelters.csv")
 ```
 
-```{r}
-# Aggregate room data by week
-room_yr_week = room %>%
-  filter(OCCUPANCY_DATE >= "2021-01-03" & OCCUPANCY_DATE <= "2024-09-21") %>%
-  mutate(
-    start_of_year = as.Date(paste0(year(OCCUPANCY_DATE), "-01-03")),  # Define Jan 3rd as start
-    week_of_year = as.integer(difftime(OCCUPANCY_DATE, start_of_year, units = "days") / 7) + 1,
-    year_week = paste0(year(OCCUPANCY_DATE), sprintf("%02d", week_of_year))
-  ) %>%
-  summarise(
-    capacity_actual_sum = sum(capacity_actual_sum),
-    capacity_funding_sum = sum(capacity_funding_sum),
-    occupied_sum = sum(occupied_sum),
-    unoccupied_sum = capacity_actual_sum - occupied_sum,
-    unavailable_sum = capacity_funding_sum - capacity_actual_sum,
-    occupancy_rate = occupied_sum / capacity_actual_sum,
-    .by = c(year_week, shelter_location_pair)
-  )
+## Data Cleaning
 
-# Aggregate bed data by week
-bed_yr_week = bed %>%
+To make our shelter data consistent with the date format of the COVID data,
+we will group the shelter data into year_week groups (e.g. 202101 means the
+first week of 2021).
+
+Furthermore, we are defining Jan 3rd as the start date to be consistent with
+the year week aggregation of the COVID data.
+
+```{r Aggregate year week}
+aggregate_year_week = function(df) {
+  #' Groups df rows in year_week format.
+  #' Starts in Jan 3rd 2021 and ends on Sept 21st 2024.
+  #' Returns the transformed dataframe.
+  #' @param df The dataframe to be transformed
+  df %>%
   filter(OCCUPANCY_DATE >= "2021-01-03" & OCCUPANCY_DATE <= "2024-09-21") %>%
   mutate(
     start_of_year = as.Date(paste0(year(OCCUPANCY_DATE), "-01-03")),  # Define Jan 3rd as start
@@ -51,20 +50,32 @@ bed_yr_week = bed %>%
     occupancy_rate = occupied_sum / capacity_actual_sum,
     .by = c(year_week, shelter_location_pair)
   )
+}
+
+# Apply to bed and room dataframes
+bed_yr_week = aggregate_year_week(bed)
+room_yr_week = aggregate_year_week(room)
 ```
 
-```{r}
-# Add year_week to covid data
- modified_covid_data = covid_data %>%
+Next, we want to filter the COVID data to only be within Ontario and within
+Jan 3rd 2021 and Sept 21st 2024.
+
+Once that happens, merge the modified_covid_data with bed_yr_week and room_yr_week.
+
+```{r Modify COVID data}
+# Add year_week to COVID data
+modified_covid_data = covid_data %>%
   filter(date >= "2021-01-03" & date <= "2024-09-21") %>%
-  mutate(year_week = if_else(
-    reporting_week < 10,
-    paste0(as.character(reporting_year), "0", as.character(reporting_week)),
-    paste0(as.character(reporting_year), as.character(reporting_week))
-  )) %>%
+  mutate(
+    year_week = if_else(
+      reporting_week < 10,
+      paste0(as.character(reporting_year), "0", as.character(reporting_week)),
+      paste0(as.character(reporting_year), as.character(reporting_week))
+    )
+  ) %>%
   filter(prname == "Ontario")
 
-# Combine room and bed data with covid data
+# Combine room and bed data with COVID data
 covid_with_beds = merge(
   x = bed_yr_week,
   y = modified_covid_data,
@@ -76,5 +87,231 @@ covid_with_rooms = merge(
   y = modified_covid_data,
   by = 'year_week'
 )
+
+# Remove original COVID, bed, and room dataframes
+rm(covid_data)
+rm(bed)
+rm(room)
 ```
 
+Now that we have the shelter dataframes (both bed and room) are merged with
+the COVID dataframe respectively, check if the columns are consistent across
+both merged dataframes.
+
+```{r Column consistency}
+# Make sure all columns are the appropriate datatype
+colnames(covid_with_beds) == colnames(covid_with_rooms)
+```
+
+All columns are consistent.
+
+Next, clean the data as follows:
+- Make NA values consistent (change from "-" to NA)
+- Convert dates into proper date objects
+
+```{r}
+colnames(covid_with_beds)
+```
+
+```{r Clean data}
+# Getting numeric columns
+# numeric_columns = colnames(select_if(covid_with_rooms, is.numeric))
+
+numeric_columns = list(
+  "capacity_actual_sum",
+  "capacity_funding_sum",
+  "occupied_sum",
+  "unoccupied_sum",
+  "unavailable_sum",
+  "occupancy_rate",
+  "totalcases",
+  "numtotal_last7",
+  "ratecases_total",
+  "numdeaths",
+  "numdeaths_last7",
+  "ratedeaths",
+  "ratecases_last7",
+  "ratedeaths_last7",
+  "numtotal_last14",
+  "numdeaths_last14",
+  "ratetotal_last14",
+  "ratedeaths_last14",
+  "avgcases_last7",
+  "avgincidence_last7",
+  "avgdeaths_last7",
+  "avgratedeaths_last7"  
+)
+
+
+# Cleaning numeric columns
+for (col in numeric_columns)
+{
+  # replace -'s with NA
+  covid_with_rooms[which(covid_with_rooms[col] == "-"),col] <- NA
+  covid_with_beds[which(covid_with_beds[col] == "-"),col] <- NA
+  
+  # change to numeric datatype
+  covid_with_beds[,col] <- as.numeric(covid_with_beds[,col])
+  covid_with_rooms[,col] <- as.numeric(covid_with_rooms[,col])
+}
+
+# date needs to go from character to date type
+covid_with_beds[,"date"] <- as.Date(covid_with_beds[,"date"])
+covid_with_rooms[,"date"] <- as.Date(covid_with_rooms[,"date"])
+```
+
+## Time series EDA
+
+### ACF/PACF
+
+```{r Plot ACF/PACF function}
+plot_ts_acf_pacf = function(df, col, bed_or_room) {
+  #' Plots the ACF and PACF of col in df
+  #' @param df The dataframe
+  #' @param col The column in df
+  #' @param bed_or_room Either bed or room
+  for (pairing in unique(df$shelter_location_pair)) {
+    # filtered_df
+    filtered_df = df %>%
+      filter(shelter_location_pair == pairing) %>%
+      dplyr::select(all_of(col))
+  
+    # ACF
+    acf_result <- acf(
+      filtered_df,
+      lag.max = 10000,
+      plot = FALSE,
+      na.action = na.pass
+    )
+    plot(acf_result, main = paste(
+      "ACF of", col, "for", bed_or_room, "based shelter:", pairing
+    ))
+  
+    # PACF
+    pacf_result <- pacf(
+      filtered_df,
+      lag.max = 10000,
+      plot = FALSE,
+      na.action = na.pass
+    )
+    plot(pacf_result, main = paste(
+      "PACF of", col, "for", bed_or_room, "based shelter:", pairing
+    ))
+  }
+}
+```
+
+```{r covid_with_beds$totalcases}
+plot_ts_acf_pacf(df = covid_with_beds, col = 'totalcases', bed_or_room = "bed")
+```
+
+All ACFs and PACFs for totalcases among the bed shelters are the same since all 5 bed shelters contain 194 year_week records across the data.
+
+```{r covid_with_beds$numdeaths}
+plot_ts_acf_pacf(df = covid_with_beds, col = 'numdeaths', bed_or_room = 'bed')
+```
+
+All ACFs and PACFs for numdeaths among the bed shelters are the same since all 5 bed shelters contain 194 year_week records across the data.
+
+```{r covid_with_rooms$totalcases}
+plot_ts_acf_pacf(df = covid_with_rooms, col = 'totalcases', bed_or_room = 'room')
+```
+
+Room shelters 40-1114, 2-1066, and 82-1163 all have all 194 records, leading to the same ACFs and PACFs. Meanwhile, shelter 53-1103 only has 156 records, and shelter 40-1320 only has 133 records.
+
+```{r covid_with_rooms$numdeaths}
+plot_ts_acf_pacf(df = covid_with_rooms, col = 'numdeaths', bed_or_room = 'room')
+```
+
+Room shelters 40-1114, 2-1066, and 82-1163 all have all 194 records, leading to the same ACFs and PACFs. Meanwhile, shelter 53-1103 only has 156 records, and shelter 40-1320 only has 133 records.
+
+### Scatterplots
+
+In this section, investigate:
+- Rate of Total Cases vs Occupancy Rate
+- Rate of Deaths vs Occupancy Rate
+
+The investigation will be done per shelter.
+
+```{r Rate of Total Cases vs Occupancy Rate}
+# Beds
+for (pair in unique(covid_with_beds$shelter_location_pair)) {
+    subset = covid_with_beds %>%
+      filter(shelter_location_pair == pair) %>%
+      dplyr::select(year_week, totalcases, occupancy_rate) %>%
+      drop_na()
+
+    plot(
+      subset$totalcases,
+      subset$occupancy_rate,
+      type = 'b',
+      main = paste("Rate of Total Cases vs Occupancy Rate for shelter", pair))
+}
+
+# Rooms
+for (pair in unique(covid_with_rooms$shelter_location_pair)) {
+    subset = covid_with_rooms %>%
+      filter(shelter_location_pair == pair) %>%
+      dplyr::select(year_week, totalcases, occupancy_rate)
+    
+    plot(
+      subset$totalcases,
+      subset$occupancy_rate,
+      type = 'b',
+      main = paste("Rate of Total Cases vs Occupancy Rate for shelter", pair))
+}
+```
+
+```{r Rate of Deaths vs Occupancy Rate}
+# Beds
+for (pair in unique(covid_with_beds$shelter_location_pair)) {
+    subset = covid_with_beds %>%
+      filter(shelter_location_pair == pair) %>%
+      dplyr::select(year_week, ratedeaths, occupancy_rate)
+    
+    plot(
+      subset$ratedeaths,
+      subset$occupancy_rate,
+      type = 'b',
+      main = paste("Rate of Deaths vs Occupancy Rate for shelter", pair))
+}
+
+# Rooms
+for (pair in unique(covid_with_rooms$shelter_location_pair)) {
+    subset = covid_with_rooms %>%
+      filter(shelter_location_pair == pair) %>%
+      dplyr::select(year_week, ratedeaths, occupancy_rate)
+    
+    plot(
+      subset$ratedeaths,
+      subset$occupancy_rate,
+      type = 'b',
+      main = paste("Rate of Deaths vs Occupancy Rate for shelter", pair))
+}
+```
+
+### Cross-Covariance Function
+
+```{r CCF}
+subset = covid_with_beds %>%
+  filter(ratedeaths > 120)
+
+ccf(subset$ratedeaths, subset$occupancy_rate, lag.max = 100)
+```
+
+### FanChart
+
+```{r VAR and Portmanteau}
+x = cbind(subset$occupancy_rate, subset$ratedeaths)
+VARselect(x, lag.max = 10, type = "both")
+my_fit = VAR(x, p=3, type = 'both')
+restrict(my_fit, method = 'ser')
+
+my_residuals <- residuals(my_fit)
+plot.ts(my_residuals)
+
+serial.test(my_fit, lags.pt = 16, type = "PT.adjusted")
+
+my_fit_pr <- predict(my_fit, n.ahead = 10, ci = 0.95)
+fanchart(my_fit_pr, cis = c(0.95))
+```

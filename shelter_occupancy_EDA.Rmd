@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "EDA for Shelter Occupancy"
 author: "Erica Fan"
 date: "2025-01-28"
 output: html_document
@@ -120,5 +120,60 @@ for (pair in tb_shelters)
 {
   tmp <- topbed %>% filter(shelter_location_pair == pair) 
   boxplot(tmp$modified_occupancy, main=pair)
+}
+```
+
+# Scatterplots
+```{r Weekly averages of rooms}
+for (pairing in unique(toproom$shelter_location_pair)) {
+  
+  corr_data <- toproom %>%
+    filter(shelter_location_pair == pairing) %>%
+    mutate(year_week = format(as.Date(OCCUPANCY_DATE), "%Y-%V")) %>%
+    group_by(year_week) %>%
+    summarise(Occupancy_Room = mean(occupancy_rate, na.rm = TRUE)) %>%
+    arrange(year_week)
+  
+  # year_week as factor for plotting
+  corr_data$year_week <- as.factor(corr_data$year_week)
+  
+  # Plot time series
+  p <- ggplot(corr_data, aes(x = year_week, y = Occupancy_Room, group = 1)) +
+    geom_line(color = "blue") +
+    geom_point(color = "red") +
+    ggtitle(paste("Occupancy Rate for", pairing)) +
+    xlab("Year-Week") +
+    ylab("Avg Weekly Occupancy Rate") +
+    theme_minimal()
+
+  print(p)
+}
+```
+
+```{r Weekly averages for beds}
+for (pairing in unique(topbed$shelter_location_pair)) {
+  
+  # Process data for each shelter-location pair
+  corr_data <- topbed %>%
+    filter(shelter_location_pair == pairing) %>%
+    mutate(year_week = format(as.Date(OCCUPANCY_DATE), "%Y-%V")) %>%
+    group_by(year_week) %>%
+    summarise(Occupancy_Bed = mean(occupancy_rate, na.rm = TRUE)) %>%
+    arrange(year_week)
+  
+  # year_week as factor for plotting
+  corr_data$year_week <- as.factor(corr_data$year_week)
+  
+  # Plot time series
+  p <- ggplot(corr_data, aes(x = year_week, y = Occupancy_Bed, group = 1)) +
+    geom_line(color = "blue") +
+    geom_point(color = "red") +
+    ggtitle(paste("Occupancy Rate for", pairing)) +
+    xlab("Year-Week") +
+    ylab("Avg Weekly Occupancy Rate") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+  print(p)
 }
 ```

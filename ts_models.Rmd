@@ -73,6 +73,8 @@ for (pairing in unique(top_5_bed_based_df$shelter_location_pair)) {
  })
 }
 ```
+# All ADF tests suggest non-stationarity
+
 
 # SARIMA for first room shelter:location pair
 
@@ -92,10 +94,17 @@ corr_data_1 <- top_5_room_based_df %>%
       dplyr::select(Occupancy_Room) %>%
       pull()
 
+
 sarima(corr_data_1, 2, 1, 2)
+```
+# SARIMA fit diagnostics reject H0 for all lags for the Ljung-Box test, suggesting the data is correlated. Furthermore, the standardized residuals are relatively fat-tailed (based off the QQ-plot) and they also do not resemble white noise. Thus, we reject this fit as a good predictor for the data.
+
+# Checking for leptokurtic behavior and volatility clustering that would suggest the use of a GARCH fit.
+```{r}
 kurtosis(corr_data_1)
 acf(corr_data_1^2)
 ```
+# Excess kurtosis is positive, implying leptokurticity and acf for the squared data decays closely and steadily, suggesting there is volatility clustering. To this effect, attempting a GARCH model is reasonable.
 
 # GARCH model for first room shelter:location pair
 
