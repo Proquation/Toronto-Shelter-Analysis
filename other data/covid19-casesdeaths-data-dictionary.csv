@@ -1,0 +1,39 @@
+Column Header,Variable Name,Description
+pruid,Provincial ID,"Identification number assigned to a jurisdiction (province, territory, Canada)"
+prname,Province name (English),"English name of jurisdiction (province, territory, Canada)"
+prnameFR,Province name (French),"French name of jurisdiction (province, territory, Canada)"
+date,Epidemiological week end date,Last day of the epidemiologic week for which the data represent. Epidemiological weeks are from Sunday to Saturday and this date will always fall on a Saturday.
+reporting_week,Week number,"Number assigned to each epidemiologic week in a calendar year, based on the Fluwatch weeks calendar"
+reporting_year,Year,The calendar year associated with the epidemiologic week (based on the Fluwatch weeks calendar) in which the data was reported.
+update,Report update,Indicates if the jurisdiction reported an update that week for any indicator (1=yes 0=no)
+totalcases,Total number of cases,The total number of cases reported from January 2020 until the end of the reporting week in a jurisdiction.  
+numtotal_last7,Number of cases reported in the reporting week,"Total number of cases during the reporting week for a jurisdiction, minus the total number of cases from that jurisdiction's previous week's update. "
+ratecases_total,"Case rate per 100,000 population","The total number of cases for a jurisdiction divided by the population of that jurisdiction, multiplied by 100,000 [(totalcases/population) x 100,000]"
+numdeaths,Total number of deaths,The total number of deaths reported from January 2020 until the end of the reporting week in a jurisdiction. 
+numdeaths_last7,Number of deaths reported in the reporting week,"Total number of deaths for a jurisdiction, minus the total number of deaths from that jurisdiction's previous week's update."
+ratedeaths,"Death rate per 100,000  population","The total number of deaths for a jurisdiction divided by the population of that jurisdiction, multiplied by 100,000 [(numdeaths/population) x 100,000]"
+ratecases_last7,"Case rate in the reporting week per 100,000 population","The number of cases reported over the last reporting week for a jurisdiction, divided by the population of that jurisdiction, multiplied by 100,000 [(numtotal_last7/population) x 100,000]"
+ratedeaths_last7,"Death rate in the reporting week per 100,000 population","The number of deaths reported over the last reporting week in a jurisdiction, divided by the population of that jurisdiction, multiplied by 100,000 [(numdeaths_last7 /population) x 100,000]"
+numtotal_last14,Number of cases reported in last 2 reporting weeks,The number of cases reported over the last 2 reporting weeks in a jurisdiction
+ratetotal_last14,"Case rate in last 2 reporting weeks per 100,000 population","The number of cases reported over the last 2 reporting weeks in a jurisdiction, divided by the population of that jurisdiction, multiplied by 100,000 [(numtotal_last14/population) x 100,000]"
+numdeaths_last14,Number of deaths reported in last 2 reporting weeks,The number of deaths reported over the last 2 reporting weeks in a jurisdiction
+ratedeaths_last14,"Death rate in last 2 weeks per 100,000 population","The number deaths reported over the last 2 reporting weeks in a jurisdiction, divided by the population of that jurisdiction, multiplied by 100,000  [(numdeaths_last14/population) x 100,000]"
+avgcases_last7,Average daily cases reported over the last reporting week,"The number of cases reported over the reporting week in a jurisdiction, divided by 7 days"
+avgincidence_last7,"Average daily cases reported over the last reporting week per 100,000 population","The number of cases reported over the reporting week in a jurisdiction, divided by 7 days, divided by the population of that jurisdiction, multiplied by 100,000  [(avgcases_last7/population) x 100,000]"
+avgdeaths_last7,Average daily deaths reported over the last reporting week,"The number of deaths reported over the reporting week in a jurisdiction, divided by 7 days"
+avgratedeaths_last7,"Average daily deaths reported over the last reporting week per 100,000","The number of deaths reported over the reporting week in a jurisdiction, divided by 7 days, divided by the population of that jurisdiction, multiplied by 100,000 [(avgdeaths_last7/population) x 100,000]"
+,,
+,,
+Notes: ,,
+1) The denominator for rate calculations uses Statistics Canada 2023 Q3 population estimates unless otherwise specified. Refer to the current quarterly population estimates.,,
+2) Canada metrics for the last 7 days include only jurisdictions that have complete data within the latest reporting week. Canada metrics  for the  last 14 days include jurisdictions that have complete data within the latest two reporting weeks.,,
+"3) This information is based on data published by our provincial and territorial partners on cases, and deaths. For the most up to date data for any province, territory or city, please visit their website. The number of cases or deaths reported in any week may differ slightly from those on the provincial and territorial websites. This is because provinces and territories may go back and update their case and death counts as new information becomes available.",,
+4) Metrics should be interpreted with caution as they are subject to data corrections or backfill (sometimes described as bulk reporting) from jurisdictions.,,
+"5) When a jurisdiction reported weekly, but not by epidemiological week, the cases and/or deaths were distributed evenly over the week represented in the provincial/territorial report. This dataset uses current provincial/territorial reporting practices to calculate all historic and current case and death counts.",,
+"6) When a jurisdiction does not report by day or week, weekly counts are not calculated for that jurisdiction. If available, in the provincial/territorial report, counts for the last 2 reporting weeks are incorporated. ",,
+7) Blank cells or those with dashes indicate that the number of cases or deaths was not available.,,
+8) The fluwatch weeks calender is available at https://www.canada.ca/en/public-health/services/diseases/flu-influenza/influenza-surveillance/fluwatch-weeks-calendar.html,,
+"9) Due to changes in COVID-19 testing policies in many jurisdictions since December 2021, case counts are under-estimated.",,
+"10) As of the epidemiological week end date of May 25, 2024, data on the numbers and rates of COVID-19 cases will no longer be updated.",,
+11) These data are updated every Tuesday. ,,
+,,
