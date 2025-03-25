@@ -1,0 +1,124 @@
+---
+title: "Untitled"
+author: "Erica Fan"
+date: "2025-01-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+topbed <- read.csv("top_5_bed_based_shelters.csv")
+toproom <- read.csv("top_5_room_based_shelters.csv")
+
+summary(topbed)
+summary(toproom)
+```
+NA's in toproom: capacity_funding_sum and unavailable_sum
+
+```{r fix dates}
+# fix dates
+topbed$OCCUPANCY_DATE <- as.Date(topbed$OCCUPANCY_DATE)
+toproom$OCCUPANCY_DATE <- as.Date(toproom$OCCUPANCY_DATE)
+
+# these plots not very helpful; shelters are almost always at/near capacity as expected
+boxplot(toproom$occupancy_rate, ylim=c(0.95, 1))
+boxplot(topbed$occupancy_rate)
+hist(topbed$occupancy_rate)
+hist(toproom$occupancy_rate)
+```
+
+```{r fix occupancy rates > 1}
+# deprecated since this was fixed upstream (Commit 9734746)
+# 
+# # find observations with occupancy rates > 1
+# badroom <- which(toproom$occupancy_rate > 1)
+# badbed <- which(topbed$occupancy_rate > 1)
+# toproom[badroom, ]
+# topbed[badbed, ]
+# # Only for 2 (3) shelters, over consecutive dates
+# 
+# # Decision to overwrite occupancy rates > 1 than as 1
+# toproom[badroom, "occupancy_rate"]  <- 1
+# topbed[badbed, "occupancy_rate"] <- 1
+```
+
+# Boxplots
+Group by categoricals, shelters later
+
+## Simple boxplots
+$\text{Modified Occupancy Rate} = \left| 1 - \text{Occupancy Rate} \right|$
+
+```{r transform data}
+toproom <- toproom %>% 
+  mutate(modified_occupancy = abs(1 - occupancy_rate))
+topbed <- topbed %>% 
+  mutate(modified_occupancy = abs(1 - occupancy_rate))
+```
+
+```{r simple boxplot}
+boxplot(topbed$modified_occupancy)
+boxplot(toproom$modified_occupancy)
+
+boxplot(topbed$modified_occupancy, ylim = c(0, 0.1))
+boxplot(toproom$modified_occupancy, ylim = c(0, 0.02))
+
+summary(topbed$modified_occupancy)
+tr_summ <- summary(toproom$modified_occupancy)
+```
+
+```{r top room outliers}
+tr_extreme <- tr_summ[[5]] + 1.5*(tr_summ[[5]] - tr_summ[[2]])
+tr_outliers <- which(toproom$modified_occupancy > tr_extreme)
+hist(toproom$modified_occupancy[tr_outliers])
+
+# % of toproom considered outliers
+1230/6509
+```
+Top Room: Almost 19% of all datapoints considered to be "outliers", spread out all the way from .018 to 1.0
+
+## Boxplots (group by shelter)
+```{r top room shelter one at a time}
+tr_shelters <- unique(toproom$shelter_location_pair)
+
+for (pair in tr_shelters)
+{
+  tmp <- toproom %>% filter(shelter_location_pair == pair) 
+  boxplot(tmp$modified_occupancy, main=pair)
+}
+```
+
+```{r boxplots on one plot}
+library(tidyverse)
+
+ggplot(toproom, aes(shelter_location_pair, modified_occupancy, 
+                    fill=shelter_location_pair) ) +
+  geom_boxplot()
+
+ggplot(topbed, aes(shelter_location_pair, modified_occupancy, 
+                   fill=shelter_location_pair) ) +
+  geom_boxplot()
+
+# plot the top 4 room-based shelters excluding the weird one
+top4room <- toproom %>% filter(shelter_location_pair != "82 - 1163")
+ggplot(top4room, aes(shelter_location_pair, modified_occupancy, 
+                     fill=shelter_location_pair) ) +
+  geom_boxplot() + 
+  ylim(0,0.016)
+```
+
+```{r top bed}
+tb_shelters <- unique(topbed$shelter_location_pair)
+
+for (pair in tb_shelters)
+{
+  tmp <- topbed %>% filter(shelter_location_pair == pair) 
+  boxplot(tmp$modified_occupancy, main=pair)
+}
+```
