@@ -14,7 +14,7 @@ library(vars)
 ## Read Data
 ```{r Read data}
 covid_data = read.csv("other data/covid19-download.csv")
-covid_description = read.csv("other data/covid19-casesdeaths-data-dictionary.csv")
+# covid_description = read.csv("other data/covid19-casesdeaths-data-dictionary.csv")
 bed = read.csv("top_5_bed_based_shelters.csv")
 room = read.csv("top_5_room_based_shelters.csv")
 ```
