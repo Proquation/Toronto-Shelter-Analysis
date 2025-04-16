@@ -3,11 +3,11 @@ Shelter occupancy analysis on Toronto's shelter groups and organizations.
 
 ## Purpose
 
-The purpose of this R project is to clean, analyze and predict occupancy rates for shelter-location pairs. Exploratory data analysis with boxplots, scatterplots, ACFs, PACFS and time series were used. Prediction consisted of various time series algorithms such as SARIMA and GARCH, eventually landing on Expectation Maximization.
+The purpose of this R project is to clean, analyze and predict occupancy rates for shelter-location pairs. Exploratory data analysis with boxplots, scatterplots, ACFs, PACFS and time series were used. Prediction consisted of various time series algorithms such as SARIMA and GARCH, eventually landing on Expectation Maximization. We want to try to predict what occupancy rates will look like in the future!
 
 ## Inspiration
 
-Erica was doing a shelter project beforehand and there's lots of talk about emergency shelters in Toronto due to the housing crisis. 
+Erica was doing a shelter project beforehand and there had been lots of discussion in media about emergency shelters in Toronto due to the housing crisis. The rest of the group was intrigued in this topic as well as we all do not live with our family and seek to survive in Toronto's housing landscape.
 
 ## What we did
 
