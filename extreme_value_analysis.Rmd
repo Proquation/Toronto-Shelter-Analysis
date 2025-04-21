@@ -1,0 +1,154 @@
+---
+title: "Extreme Value Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Rationale
+After attempting to model shelter occupancy using various time series methodologies (SARIMA, GARCH, Kálmán filtering with EM algorithm), we considered the limited usefulness of such models given how most shelters are almost always at or near full capacity.
+
+We revisited earlier EDA work and realized that most shelters were heavy tailed, and it may be worth further investigating lower tail behaviour.
+
+## Steps
+- Identify outliers (lower tail only)
+- Time series plots
+- Observe behaviour (increase vs decrease)
+- Verify fat tailedness (plots, hypothesis testing?)
+- Compute risk measures (VaR, CVaR)
+- Tail distribution inference
+
+
+## Find Outliers
+```{r libraries}
+library(tidyverse)
+```
+## EDA Revisited
+```{r ingest data}
+topbed <- read.csv("top_5_bed_based_shelters.csv")
+toproom <- read.csv("top_5_room_based_shelters.csv")
+
+topbed$OCCUPANCY_DATE <- as.Date(topbed$OCCUPANCY_DATE)
+toproom$OCCUPANCY_DATE <- as.Date(toproom$OCCUPANCY_DATE)
+```
+
+```{r boxplots}
+boxplot(toproom$occupancy_rate, main="Top Room Occupancy Rates")
+boxplot(topbed$occupancy_rate, main="Top Bed Occupancy Rates")
+ggplot(toproom, 
+       aes(shelter_location_pair, occupancy_rate, fill=shelter_location_pair)) +
+  geom_boxplot() + 
+  ggtitle("Occupancy Rate by Shelter (Room-Based)")
+
+ggplot(topbed, 
+       aes(shelter_location_pair, occupancy_rate, fill=shelter_location_pair)) +
+  geom_boxplot() +
+  ggtitle("Occupancy Rate by Shelter (Bed-Based)")
+```
+Evidently, both the bed-based and room-based shelters have a very high number of outliers when aggregated, as do almost all of the individual shelters.
+
+
+```{r histograms}
+q3.bed <- quantile(topbed$occupancy_rate, .75)
+q1.bed <- quantile(topbed$occupancy_rate, .25)
+q3.room <- quantile(toproom$occupancy_rate, .75)
+q1.room <- quantile(toproom$occupancy_rate, .25)
+
+# Add lines to indicate where whiskers end on the boxplots
+ol.bed <- q1.bed - 1.5*(q3.bed - q1.bed)
+ol.room <- q1.room - 1.5*(q3.room - q1.room) 
+
+
+bks <- seq(0, 1, by=.01)
+
+hist(topbed$occupancy_rate, breaks= seq(.6, 1.1, .01))
+abline(v=ol.bed)
+
+hist(toproom$occupancy_rate, breaks=bks)
+abline(v=ol.room)
+```
+## Choosing Outlier Cutoff Point
+The default boxplot threshold for what counts as an outlier ($Q1 - 1.5IQR$) may not be the most appropriate. We experiment with two other thresholds for now:
+* 99% occupancy rate
+* The point where the tail has mostly flattened out 
+
+```{r keep outliers only}
+# By default cutoff
+outdef.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= ol.bed)
+
+outdef.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= ol.room)
+
+# By 99% cutoff
+out99.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= .99)
+
+out99.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= .99)
+
+
+# By cutoff where it flattens out
+outflat.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= .93)
+
+outflat.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+  filter(occupancy_rate <= .97)
+```
+
+Plot histograms of outliers only.
+```{r histogram of outliers only}
+#par(mfrow=c(3,2))
+hist(outdef.bed$occupancy_rate, 
+     main="Bed-Based Outlier Occupancy Rates (Q1 - 1.5IQR threshold)", 
+     xlab="Occupany Rate")
+hist(outdef.room$occupancy_rate,
+     main="Room-Based Outlier Occupancy Rates (Q1 - 1.5IQR threshold)", 
+     xlab="Occupany Rate")
+hist(out99.bed$occupancy_rate,
+     main="Bed-Based Outlier Occupancy Rates (99% threshold)", 
+     xlab="Occupany Rate")
+hist(out99.room$occupancy_rate,
+     main="Room-Based Outlier Occupancy Rates (99% threshold)", 
+     xlab="Occupany Rate")
+hist(outflat.bed$occupancy_rate,
+     main="Bed-Based Outlier Occupancy Rates (93% threshold)", 
+     xlab="Occupany Rate")
+hist(outflat.room$occupancy_rate,
+     main="Room-Based Outlier Occupancy Rates (97% threshold)", 
+     xlab="Occupany Rate")
+```
+
+```{r outlier ts plots}
+plot(outdef.room$OCCUPANCY_DATE, outdef.room$occupancy_rate, pch=20,
+     main="Occupancy Rate Outliers (Q1 - 1.5IQR threshold)",
+     xlab="Date", ylab="Occupancy Rate")
+points(outdef.bed$OCCUPANCY_DATE, outdef.bed$occupancy_rate, pch=20, col="red")
+legend("bottomright", legend=c("Room-Based", "Bed-Based"), pch=20,
+       col=c("black", "red"))
+
+plot(out99.room$OCCUPANCY_DATE, out99.room$occupancy_rate, pch=20, 
+     main="Occupancy Rate Outliers (99% threshold)",
+     xlab="Date", ylab="Occupancy Rate")
+points(out99.bed$OCCUPANCY_DATE, out99.bed$occupancy_rate, pch=20, col="red")
+legend("bottomright", legend=c("Room-Based", "Bed-Based"), pch=20,
+       col=c("black", "red"))
+
+plot(outflat.room$OCCUPANCY_DATE, outflat.room$occupancy_rate, pch=20,
+     main="Occupancy Rate Outliers (93% and 97% threshold)",
+     xlab="Date", ylab="Occupancy Rate")
+points(outflat.bed$OCCUPANCY_DATE, outflat.bed$occupancy_rate, pch=20, col="red")
+legend("bottomright", legend=c("Room-Based", "Bed-Based"), pch=20,
+       col=c("black", "red"))
+```
+
+## Next Steps 
+* Time series plots zooming in on time intervals with any outlier
+* Plot outliers by shelter (only rooms for now)
+
+```{r}
+toproom %>% filter(shelter_location_pair == "82 - 1163") %>% head()
+```
