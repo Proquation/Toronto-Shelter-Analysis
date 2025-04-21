@@ -189,6 +189,7 @@ time_series <- as.ts(vector, start = 1)
 forecasted_em <- forecast(time_series, h = 50)
 
 # Plotting the forecasted EM model 
+
 plot(forecasted_em, main = pairing_1)
 length(forecasted_em$x)
 length(forecasted_em$mean)
@@ -199,6 +200,41 @@ plot(forecasted_em$residuals)
 
 #hist(as.numeric(unlist(forecasted_em$x)))
 #hist(forecasted_em$mean)
+```
+
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_1)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_1[1:train_split]
+
+test <- corr_data_1[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
 ```
 
 ### Attempt at making a SSM class model
@@ -327,6 +363,41 @@ plot(forecasted_em, main = pairing_2)
 hist(forecasted_em$mean)
 ```
 
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_2)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_2[1:train_split]
+
+test <- corr_data_2[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
+
 # Loading third room shelter:location pair
 
 ```{r}
@@ -396,6 +467,41 @@ forecasted_em <- forecast(time_series, h = 50)
 plot(forecasted_em, main = pairing_3)
 
 hist(forecasted_em$mean)
+```
+
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_3)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_3[1:train_split]
+
+test <- corr_data_3[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
 ```
 
 # Loading fourth shelter:location pair
@@ -473,6 +579,41 @@ plot(forecasted_em, main = pairing_4)
 
 
 hist(forecasted_em$mean)
+```
+
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_4)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_4[1:train_split]
+
+test <- corr_data_4[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
 ```
 
 # Loading fifth room shelter:location pair
@@ -555,6 +696,41 @@ plot(forecasted_em, main = pairing_5)
 hist(forecasted_em$mean)
 ```
 
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_5)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_5[1:train_split]
+
+test <- corr_data_5[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
 # EM for Beds
 
 # Loading first bed shelter:location pair
@@ -634,6 +810,41 @@ plot(forecasted_em, main = pairing_1_bed)
 hist(forecasted_em$mean)
 ```
 
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_1_bed)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_1_bed[1:train_split]
+
+test <- corr_data_1_bed[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
+
 # Loading second bed shelter:location pair
 
 ```{r}
@@ -709,6 +920,41 @@ plot(forecasted_em, main = pairing_2_bed)
 
 
 hist(forecasted_em$mean)
+```
+
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_2_bed)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_2_bed[1:train_split]
+
+test <- corr_data_2_bed[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
 ```
 
 # Loading third bed shelter:location pair
@@ -788,6 +1034,41 @@ plot(forecasted_em, main = pairing_3_bed)
 hist(forecasted_em$mean)
 ```
 
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_3_bed)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_3_bed[1:train_split]
+
+test <- corr_data_3_bed[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
+
 # Loading fourth bed shelter:location pair
 
 ```{r}
@@ -864,6 +1145,41 @@ plot(forecasted_em, main = pairing_4_bed)
 hist(forecasted_em$mean)
 ```
 
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_4_bed)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_4_bed[1:train_split]
+
+test <- corr_data_4_bed[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
+
 # Loading fifth bed shelter:location pair
 
 ```{r}
@@ -938,6 +1254,58 @@ forecasted_em <- forecast(time_series, h = 50)
 plot(forecasted_em, main = pairing_5_bed)
 
 hist(forecasted_em$mean)
+```
+
+```{r train test split, include = FALSE}
+num_entries <- length(corr_data_5_bed)
+
+train_split <- floor(0.7 * num_entries)
+
+train <- corr_data_5_bed[1:train_split]
+
+test <- corr_data_5_bed[(train_split + 1): num_entries]
+
+em_fit_train <- fit_em(train)
+
+ks_test <- Ksmooth(test, 
+                   A = 1, 
+                   mu0 = 1, 
+                   Sigma0 = em_fit_train$Sigma0, 
+                   Phi = em_fit_train$Phi, 
+                   sQ = sqrt(em_fit_train$Q), 
+                   sR = sqrt(em_fit_train$R))
+
+ks_test_pred <- as.vector(ks_test$Xp)
+```
+
+```{r plot train test}
+plot(1:length(test), test, main = "Test Set Prediction", xlab = "time", ylab = "")
+lines(ks_test$Xp, col = "green")  # predicted mean
+lines(ks_test$Xp + 2*sqrt(ks_test$Pp), lty = 2, col = "red")  # upper bound
+lines(ks_test$Xp - 2*sqrt(ks_test$Pp), lty = 2, col = "blue") # lower bound
+```
+
+```{r accuracy train test}
+rmse_test <- sqrt((sum((test - ks_test_pred)^2)))
+
+rmse_test
+```
+
+## RMSE summary
+
+```{r rmse summary}
+room_rmse <- c(0.05306127, 0.02979755, 0.04254788, 0.01541241, 0.008944695)
+bed_rmse <- c(0.08162059, 0.08479852, 0.1141526, 0.04216453, 0.006214242)
+
+rmses <- data.frame(room_rmse, bed_rmse)
+
+rmses
+
+print(summary(rmses))
+
+cat("Mean room RMSE:", summary(rmses$room_rmse)[4], "\n")
+
+cat("Mean bed RMSE:", summary(rmses$bed_rmse)[4])
 ```
 
 # Automatic arima for rooms
