@@ -28,6 +28,16 @@ COVID data was incorporated into the dataset to see if it had any correlation wi
 
 We had also observed distributions and time series of the shelter location pairs that most shelters are full, so we performed extreme value analysis in the *extreme_value_analysis.Rmd* file. Here, we determined our own cutoffs instead of the default to analyze the data a bit better as it was heavily right skewed. When we look at the outliers, distributions still follow the right skew pattern as the original dataset.
 
+## Insights
+
+We found that the RMSE for our predictions using the EM algorithm + Kalman filter resulted in the following:
+RMSE Rooms: 0.05306127, 0.02979755, 0.04254788, 0.01541241, 0.008944695
+RMSE Beds: 0.08162059, 0.08479852, 0.1141526, 0.04216453, 0.006214242
+
+This gives us an RMSE of (mean ± std): 0.030 ± 0.016 for Rooms and and RMSE of (mean ± std): 0.066 ± 0.042. Most values hover around 0.8 - 1.
+
+As predicted values remained within ~10% of actual values, this indicates a strong stability in the model and is consistent across time.
+
 ## Challenges
 
 A major challenge we ran into is what's next? What more can we explore? Once we realize that we've discovered everything we could with the dataset and its occupancy rates, we needed to expand to incorporate other variables. However, we ran into some challenges with the limited amount of the same data types on open data portals. Daily data about homelessness, other dwelling types, or even death was difficult to find as most of this type of data is recorded on a less frequent basis.
