@@ -36,7 +36,7 @@ RMSE Beds: 0.08162059, 0.08479852, 0.1141526, 0.04216453, 0.006214242
 
 This gives us an RMSE of (mean ± std): 0.030 ± 0.016 for Rooms and and RMSE of (mean ± std): 0.066 ± 0.042. Most values hover around 0.8 - 1.
 
-As predicted values remained within 3% of actual values, this indicates a strong stability in the model and is consistent across time.
+As predicted values remained within 3% of actual values for Rooms and 6.6% of actual values for Beds, this indicates a strong stability in the model and is consistent across time.
 
 ## Challenges
 
