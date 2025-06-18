@@ -1,35 +1,34 @@
 # Toronto-Shelter-Analysis
-Shelter occupancy analysis on Toronto's shelter groups and organizations.
+Shelter occupancy analysis on Toronto's shelter groups and organizations, using [occupancy data](https://open.toronto.ca/dataset/daily-shelter-overnight-service-occupancy-capacity/) from the City of Toronto's Open Data Catalogue. Additional [COVID-19 data](https://health-infobase.canada.ca/covid-19/current-situation.html) was sourced from the Government of Canada.
 
 ## Purpose
 
-The purpose of this R project is to clean, analyze and predict occupancy rates for shelter-location pairs. Exploratory data analysis with boxplots, scatterplots, ACFs, PACFS and time series were used. Prediction consisted of various time series algorithms such as SARIMA and GARCH, eventually landing on Expectation Maximization. We want to try to predict what occupancy rates will look like in the future!
+Our goal was to predict what occupancy rates of Toronto shelters might look like in the future, understand historical patterns from the past 5 years, and see what other insights we could extract. 
+
+We also treated this like an informal capstone project, ie. as an opportunity to apply a breadth of what we've learned in school to some real data about our city. After performing **exploratory data analysis**, the bulk of our work focused on **time series modeling** using techniques such as SARIMA, GARCH, and Expectation Maximization with Kalman filtering.  
 
 ## Inspiration
 
-Erica was doing a shelter project beforehand and there had been lots of discussion in media about emergency shelters in Toronto due to the housing crisis. The rest of the group was intrigued in this topic as well as we all do not live with our family and seek to survive in Toronto's housing landscape.
+We have heard consistent reports in recent years about the city's attempts to tackle its housing crisis, including discussion about emergency shelters. We have all been impacted by the cost of living creeping up as residents of Toronto, and some of us have also known classmates and community members who have faced precarious living conditions.
 
-## What we did
+Erica had previously done a brief analysis of [Toronto's Central Intake daily call data](https://open.toronto.ca/dataset/central-intake-calls/), discovering that over the course of four years (2021-2024), there were only two days during which every individual who called in was matched with an emergency shelter. On **over 50% of days**, there were **at least 100 callers** who could not be matched with emergency shelter space.
 
-There were CSV files for each year from 2020 - 2024, so we merged the files in *Merge.R*.
+Therefore, we saw value in continuing to explore this issue quantitatively.
 
-First, we cleaned the data, removing NA/missing values and removing occupancy rates greater than 1.
-In *pre-process.Rmd*, we selected the top 5 shelter location pairs with the most non-empty counts.
+## What We Did
 
-Then, from the *shelter_occupancy_EDA.Rmd* file, we plotted the boxplots for these top 5 shelter locations pairs for rooms and beds.
+### Initial Processing
+Since each year's data was stored in separate CSV files, we first created a merged file in `merge_data.R`. We then cleaned the data, removing NA/missing values and removing occupancy rates greater than 1. 
 
-From there, we aggregated the daily occupancy rates into weekly rates in *acf_pacf_plots.Rmd* and plotted the ACF and PACF for each pair.
-We found that some of the plots had sinusoidal patterns foir the ACF with decaying PACFs with spikes at certain intervals, indicating potential seasonality. 
+In `pre-process.Rmd`, we created a unique identifier for each shelter location using its `SHELTER_ID` and `LOCATION_ID`. Each shelter can either report bed-based or room-based occupancy counts, so we selected the top 5 shelters of each reporting base with the most non-empty occupancy counts for in-depth analysis. Since each row represents the occupancy counts for a given shelter location on a given day, these selected shelters were the ones with the most complete time series data available. 
 
-In *ts_models.Rmd*, we tried SARIMA and GARCH for the first bed and room shelter location pairs, but it was ultimately useless due to its non-normal standardized residuals.
-Therefore, we pivoted to the EM algorithm with the Kalman filter for forecasting the occupancy rate, giving us predictions that are mostly linear close to an occupancy rate of 1. Essentially, most shelter locations are full all the time, lining up with our initial hypothesis.
+### Exploratory Data Analysis (EDA)
+We performed exploratory data analysis (EDA) from both a general and time series perspective. `shelter_occupancy_EDA.Rmd` contains boxplots for these top 10 shelters, and `acf_pacf_plots.Rmd` contains our autocorrelation function (ACF) and partial autocorrelation (PACF) plots for each shelter. We found that some shelters exhibit sinusoidal patterns in their ACFs and decaying PACFs that spike intermittently, indicating potential seasonality.  In this file, we also aggregated daily occupancy rates into weekly rates.
 
-COVID data was incorporated into the dataset to see if it had any correlation with occupancy rates from January 3rd, 2021 onwards. Looking at the cross covariance between COVID death rates and occupancy rates, we see that there's a negative correlation for lags 15 - 30, indicating potentially higher occupancy rates after there's been a low death rate. We also see a positive correlation in the negative lags to -35, which could mean that higher occupancy rates precede higher death rates.
+### Time Series Modelling
+We tried **SARIMA** and **GARCH** modelling for the first bed and room shelters in `ts_models.Rmd`, but these techniques had limited usefulness due to its non-normal standardized residuals. Therefore, we pivoted to implementing the E**M algorithm with Kalman filtering** to forecast the occupancy rate, giving us predictions that are mostly linear close to an occupancy rate of 1. Essentially, most shelter locations are expected to be full all the time, consistent with our initial hypothesis and historical trends.
 
-We had also observed distributions and time series of the shelter location pairs that most shelters are full, so we performed extreme value analysis in the *extreme_value_analysis.Rmd* file. Here, we determined our own cutoffs instead of the default to analyze the data a bit better as it was heavily right skewed. When we look at the outliers, distributions still follow the right skew pattern as the original dataset.
-
-## Insights
-
+#### Time Series Insights
 We found that the RMSE for our predictions using the EM algorithm + Kalman filter resulted in the following:
 RMSE Rooms: 0.05306127, 0.02979755, 0.04254788, 0.01541241, 0.008944695
 RMSE Beds: 0.08162059, 0.08479852, 0.1141526, 0.04216453, 0.006214242
@@ -38,16 +37,21 @@ This gives us an RMSE of (mean ± std): 0.030 ± 0.016 for Rooms and and RMSE of
 
 As predicted values remained within 3% of actual values for Rooms and 6.6% of actual values for Beds, this indicates a strong stability in the model and is consistent across time.
 
+### Further Insights
+Realizing that there are limited insights to be gained from forecasting occupancy rates of shelters that are usually near capacity, we turned our attention towards discovering other interesting behaviours in the data. We tried two main approaches:
+
+In `covid_EDA.Rmd`, we investigated potential **correlations between COVID data and shelter occupancy rates** from January 3rd, 2021 onwards. The cross covariance function (CCF) plot between weekly COVID death rates and shelter occupancy rates exhibits a negative correlation from lags 15 to 30, indicating potentially higher occupancy rates about 4-7 months after there's been a low death rate. We also see a positive cross-correlation from lags to 0 to -35, which could mean that higher occupancy rates precede higher death rates.
+
+We also performed **extreme value analysis** (see `extreme_value_analysis.Rmd`) in an attempt to better understand historical behaviour during the occasional periods when shelters were *not* near capacity. Room-based shelters exhibited a much larger range in occupancy rates, which we suspect is more indicative of discrepancies between reporting methods than actual trends in occupancy. The distributions of extreme values (ie. abnormally low weekly occupancy rates) for both types of shelters were very left skewed, resembling the distribution of the complete dataset.
+
 ## Challenges
 
-A major challenge we ran into is what's next? What more can we explore? Once we realize that we've discovered everything we could with the dataset and its occupancy rates, we needed to expand to incorporate other variables. However, we ran into some challenges with the limited amount of the same data types on open data portals. Daily data about homelessness, other dwelling types, or even death was difficult to find as most of this type of data is recorded on a less frequent basis.
+An early roadblock in this project was the lack of a unique identifier for shelters in the original dataset. Although the metadata was complete with descriptions for fields such as `ORGANIZATION_ID`, `SHELTER_ID`, `LOCATION_ID`, and `PROGRAM_ID`, we could not find authoritative definitions for what entities are considered a shelter rather than a program or organization. During the EDA stage, we gained a better understanding of each of these fields and generated our own unique identifier, `shelter_location_pair`.
 
-## Next steps
+A major challenge we ran into later was finding more avenues of exploration after exhausting the time series modelling route. We wanted to incorporate other variables and try applying a variety of multivariate techniques, but we were limited by the availability of suitable data from open data portals. For instance, time series data is generally pretty scarce in the City of Toronto's Open Data Catalogue which is where we sourced our original dataset. Daily data about homelessness, other dwelling types, or even death was difficult to find as most of this type of data is recorded on a less frequent basis. We also considered incorporating non-time series data, such as by introducing demographic data or other categorical variables. However, it would not have made sense to use such data about the neighbourhoods surrounding each of our shelters, since this would likely not be reflective of these shelters' occupants. 
 
-We can look at capacity changes and see how many more shelters there are compared to past years. We can also look at other metrics related to shelter occupancy and/or homelessness such as expanding on our COVID EDA. 
+## Next Steps
 
-One need that lawyers have is to know whether people are being evicted out of encampments if there aren't available slots in shelters. This could be crucial information to cross reference with the occupancy rates in shelters to see when and where people would need shelters.
+This project focused on 10 specific shelters, but future exploration can examine Toronto's overall capacity changes and see how many more shelters there are compared to past years. We can also look at other metrics related to shelter occupancy and/or housing, such as by expanding on our COVID EDA. Geospatial analysis could also be conducted, and additional accuracy metrics to evaluate our models could be computed.
 
-Accuracy metrics with our models such as RMSE would be helpful in accessing how useful EM is for example.
-
-Geospatial correlation could also be explored.
+We may also be interested in exploring Toronto's housing crisis from other angles. For instance, people can only be lawfully evicted from encampments if there is available shelter space. Advocacy groups and legal organizations may be interested in knowing whether this regulation is being respected, so finding a way to explore the relationship between occupancy rates and eviction rates could be a very impactful initiative to pursue.
