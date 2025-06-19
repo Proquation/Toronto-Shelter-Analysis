@@ -109,14 +109,16 @@ acf(corr_data_1^2)
 # GARCH model for first room shelter:location pair
 
 ```{r}
+# ARCH model (past shocks only)
 garch_fit_1_0 <- garchFit(~garch(1, 0), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
-plot(garch_fit_1_0@residuals)
-plot(garch_fit_1_0, which = 7)
+resids_1_0 <- residuals(garch_fit_1_0)
+plot(resids_1_0, type = "l", main = paste0("Residuals GARCH(1, 0) for room ", pairing_1), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "deeppink1")
 #summary(garch_fit_1_0)
 
+# Including both ARCH (past shocks) and GARCH (long term volatility)
 garch_fit_1_1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
-plot(garch_fit_1_1@residuals)
-plot(garch_fit_1_1, which = 7)
+resids_1_1 <- residuals(garch_fit_1_1)
+plot(resids_1_1, type = "l", main = paste0("Residuals GARCH(1, 1) for room ", pairing_1), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "orchid4")
 #summary(garch_fit_1_1)
 ```
 
@@ -190,7 +192,8 @@ forecasted_em <- forecast(time_series, h = 50)
 
 # Plotting the forecasted EM model 
 
-plot(forecasted_em, main = pairing_1)
+plot(forecasted_em, main = paste0("EM with Kalman filter for room shelter-location ", pairing_1), 
+     ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 length(forecasted_em$x)
 length(forecasted_em$mean)
 attributes(forecasted_em)
@@ -313,13 +316,13 @@ acf(corr_data_2^2)
 
 ```{r}
 fit_2 <- garchFit(~garch(1, 0), data = corr_data_2, include.mean = TRUE, cond.dist = "norm")
-plot(fit_2@residuals)
-plot(fit_2, which = 7)
+resids_1_0 <- residuals(fit_2)
+plot(resids_1_0, type = "l", main = paste0("Residuals GARCH(1, 0) for room ", pairing_2), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "deeppink1")
 summary(fit_2)
 
 fit_2.1 <- garchFit(~garch(1, 1), data = corr_data_2, include.mean = TRUE, cond.dist = "norm")
-plot(fit_2.1@residuals)
-plot(fit_2.1, which = 7)
+resids_1_1 <- residuals(fit_2.1)
+plot(resids_1_1, type = "l", main = paste0("Residuals GARCH(1, 1) for room ", pairing_2), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "orchid4")
 summary(fit_2.1)
 ```
 
@@ -358,7 +361,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_2)
+plot(forecasted_em, main = paste0("EM with Kalman filter for room shelter-location ", pairing_2), 
+     ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 hist(forecasted_em$mean)
 ```
@@ -421,13 +425,14 @@ kurtosis(corr_data_3)
 acf(corr_data_3^2)
 
 fit_3 <- garchFit(~garch(1, 0), data = corr_data_3, include.mean = TRUE, cond.dist = "norm")
-plot(fit_3@residuals)
-plot(fit_3, which = 7)
+resids_1_0 <- residuals(fit_3)
+
+plot(resids_1_0, type = "l", main = paste0("Residuals GARCH(1, 0) for room ", pairing_3), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "deeppink1")
 summary(fit_3)
 
 fit_3.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
-plot(fit_3.1@residuals)
-plot(fit_3.1, which = 7)
+resids_1_1 <- residuals(fit_3.1)
+plot(resids_1_1, type = "l", main = paste0("Residuals GARCH(1, 1) for room ", pairing_3), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "orchid4")
 summary(fit_3.1)
 ```
 
@@ -464,7 +469,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_3)
+plot(forecasted_em, main = paste0("EM with Kalman filter for room shelter-location ", pairing_3),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 hist(forecasted_em$mean)
 ```
@@ -575,7 +581,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_4)
+plot(forecasted_em, main = paste0("EM with Kalman filter for room shelter-location ", pairing_4),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 
 hist(forecasted_em$mean)
@@ -643,19 +650,19 @@ qqplot(corr_data_5, sample_norm)
 ## SARIMA and GARCH for fifth shelter:location pair
 
 ```{r}
-#sarima(corr_data_5, 3, 1, 2)
-# kurtosis(corr_data_5)
-# acf(corr_data_4^2)
-# 
-# fit_5 <- garchFit(~garch(1, 0), data = corr_data_5, include.mean = TRUE, cond.dist = "norm")
-# plot(fit_5@residuals)
-# plot(fit_5, which = 7)
-# summary(fit_5)
-# 
-# fit_5.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
-# plot(fit_5.1@residuals)
-# plot(fit_5.1, which = 7)
-# summary(fit_5.1)
+sarima(corr_data_5, 3, 1, 2)
+kurtosis(corr_data_5)
+acf(corr_data_4^2)
+
+fit_5 <- garchFit(~garch(1, 0), data = corr_data_5, include.mean = TRUE, cond.dist = "norm")
+resids_1_0 <- residuals(fit_5)
+plot(resids_1_0, type = "l", main = paste0("Residuals GARCH(1, 0) for room ", pairing_5), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "deeppink1")
+summary(fit_5)
+
+fit_5.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+resids_1_1 <- residuals(fit_5.1)
+plot(resids_1_1, type = "l", main = paste0("Residuals GARCH(1, 1) for room ", pairing_5), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "orchid4")
+summary(fit_5.1)
 ```
 
 # EM model for fifth room shelter:location pair
@@ -691,7 +698,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_5)
+plot(forecasted_em, main = paste0("EM with Kalman filter for room shelter-location ", pairing_5),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 hist(forecasted_em$mean)
 ```
@@ -755,19 +763,19 @@ sample_norm <- rnorm(length(corr_data_1_bed),0,1)
 
 qqplot(corr_data_1_bed, sample_norm)
 
-#sarima(corr_data_1_bed, 3, 1, 2)
-# kurtosis(corr_data_1_bed)
-# acf(corr_data_1_bed^2)
-# 
-# fit_1 <- garchFit(~garch(1, 0), data = corr_data_1_bed, include.mean = TRUE, cond.dist = "norm")
-# plot(fit_1@residuals)
-# plot(fit_1, which = 7)
-# summary(fit_1)
-# 
-# fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
-# plot(fit_1.1@residuals)
-# plot(fit_1.1, which = 7)
-# summary(fit_1.1)
+sarima(corr_data_1_bed, 3, 1, 2)
+kurtosis(corr_data_1_bed)
+acf(corr_data_1_bed^2)
+
+fit_1 <- garchFit(~garch(1, 0), data = corr_data_1_bed, include.mean = TRUE, cond.dist = "norm")
+resids_1_0 <- residuals(fit_1)
+plot(resids_1_0, type = "l", main = paste0("Residuals GARCH(1, 0) for bed ", pairing_1_bed), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "deeppink1")
+summary(fit_1)
+
+fit_1.1 <- garchFit(~garch(1, 1), data = corr_data_1, include.mean = TRUE, cond.dist = "norm")
+resids_1_1 <- residuals(fit_1.1)
+plot(resids_1_1, type = "l", main = paste0("Residuals GARCH(1, 1) for bed ", pairing_1_bed), ylab = "Residuals", xlab = "Weeks (Starting Jan 2020)", col = "orchid4")
+summary(fit_1.1)
 ```
 
 # EM model for first bed shelter:location pair
@@ -804,7 +812,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_1_bed)
+plot(forecasted_em, main = paste0("EM with Kalman filter for bed shelter-location ", pairing_1_bed),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 
 hist(forecasted_em$mean)
@@ -916,7 +925,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_2_bed)
+plot(forecasted_em, main = paste0("EM with Kalman filter for bed shelter-location ", pairing_2_bed),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 
 hist(forecasted_em$mean)
@@ -1028,7 +1038,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_3_bed)
+plot(forecasted_em, main = paste0("EM with Kalman filter for bed shelter-location ", pairing_3_bed),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 
 hist(forecasted_em$mean)
@@ -1140,7 +1151,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_4_bed)
+plot(forecasted_em, main = paste0("EM with Kalman filter for bed shelter-location ", pairing_4_bed),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 hist(forecasted_em$mean)
 ```
@@ -1251,7 +1263,8 @@ time_series <- as.ts(vector, start = 1)
 
 forecasted_em <- forecast(time_series, h = 50)
 
-plot(forecasted_em, main = pairing_5_bed)
+plot(forecasted_em, main = paste0("EM with Kalman filter for bed shelter-location ", pairing_5_bed),
+ylab = "Occupancy Rate", xlab = "Weeks (Starting Jan 2020)")
 
 hist(forecasted_em$mean)
 ```
