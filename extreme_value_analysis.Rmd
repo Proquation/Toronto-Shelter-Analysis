@@ -77,25 +77,25 @@ The default boxplot threshold for what counts as an outlier ($Q1 - 1.5IQR$) may 
 
 ```{r keep outliers only}
 # By default cutoff
-outdef.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+outdef.bed <- topbed %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= ol.bed)
 
-outdef.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+outdef.room <- toproom %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= ol.room)
 
 # By 99% cutoff
-out99.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+out99.bed <- topbed %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= .99)
 
-out99.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+out99.room <- toproom %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= .99)
 
 
 # By cutoff where it flattens out
-outflat.bed <- topbed %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+outflat.bed <- topbed %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= .93)
 
-outflat.room <- toproom %>% select(OCCUPANCY_DATE, occupancy_rate) %>% 
+outflat.room <- toproom %>% dplyr::select(OCCUPANCY_DATE, occupancy_rate) %>% 
   filter(occupancy_rate <= .97)
 ```
 
