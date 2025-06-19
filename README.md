@@ -26,7 +26,27 @@ In `pre-process.Rmd`, we created a unique identifier for each shelter location u
 We performed exploratory data analysis (EDA) from both a general and time series perspective. `shelter_occupancy_EDA.Rmd` contains boxplots for these top 10 shelters, and `acf_pacf_plots.Rmd` contains our autocorrelation function (ACF) and partial autocorrelation (PACF) plots for each shelter. We found that some shelters exhibit sinusoidal patterns in their ACFs and decaying PACFs that spike intermittently, indicating potential seasonality.  In this file, we also aggregated daily occupancy rates into weekly rates.
 
 ### Time Series Modelling
-We tried **SARIMA** and **GARCH** modelling for the first bed and room shelters in `ts_models.Rmd`, but these techniques had limited usefulness due to its non-normal standardized residuals. Therefore, we pivoted to implementing the E**M algorithm with Kalman filtering** to forecast the occupancy rate, giving us predictions that are mostly linear close to an occupancy rate of 1. Essentially, most shelter locations are expected to be full all the time, consistent with our initial hypothesis and historical trends.
+We tried **SARIMA** and **GARCH** modelling for the first bed and room shelters in `ts_models.Rmd`, but these techniques had limited usefulness due to its non-normal standardized residuals as seen below. Therefore, we pivoted to implementing the E**M algorithm with Kalman filtering** to forecast the occupancy rate, giving us predictions that are mostly linear close to an occupancy rate of 1. Essentially, most shelter locations are expected to be full all the time, consistent with our initial hypothesis and historical trends.
+
+*SARIMA* result for a room shelter-location pair:
+
+![SARIMA_room_1](https://github.com/user-attachments/assets/7ccc1358-db3f-4282-bff6-714e0c23316f)
+
+*GARCH* result for a room shelter-location pair:
+
+![GARCH_1_0_r1](https://github.com/user-attachments/assets/4702e5ac-802f-450f-a3f4-93d458034455)
+
+![GARCH_1_1_r1](https://github.com/user-attachments/assets/6bfcbbba-cb5e-48f1-b293-8dc57036afea)
+
+*SARIMA* result for a bed shelter-location pair:
+
+![SARIMA_bed_1](https://github.com/user-attachments/assets/7799a40e-ee82-4e40-ba39-1d2776045857)
+
+*GARCH* result for a bed shelter-location pair:
+
+![GARCH_1_0_bed_1](https://github.com/user-attachments/assets/c6cd636b-df11-42a0-95c5-367ffc513f97)
+
+![GARCH_1_1_bed_1](https://github.com/user-attachments/assets/1510feb0-68c4-49e4-8062-918bf08d4b7d)
 
 #### Time Series Insights
 We found that the RMSE for our predictions using the EM algorithm + Kalman filter resulted in the following:
@@ -36,6 +56,24 @@ RMSE Beds: 0.08162059, 0.08479852, 0.1141526, 0.04216453, 0.006214242
 This gives us an RMSE of (mean ± std): 0.030 ± 0.016 for Rooms and and RMSE of (mean ± std): 0.066 ± 0.042. Most values hover around 0.8 - 1.
 
 As predicted values remained within 3% of actual values for Rooms and 6.6% of actual values for Beds, this indicates a strong stability in the model and is consistent across time.
+
+Here are a few plots for the **EM Algorithm with Kalman filtering**:
+
+EM result for room shelter-location pairs:
+
+![EM_1](https://github.com/user-attachments/assets/863765da-3d3b-4249-838d-8aeb56204ec1)
+
+![EM_2](https://github.com/user-attachments/assets/7c47dc3f-de27-450a-a8b3-5bf8710e1605)
+
+![EM_3](https://github.com/user-attachments/assets/c89e003d-2519-4565-850d-3ec16e2678db)
+
+EM result for bed shelter-location pairs:
+
+![EM_1_bed](https://github.com/user-attachments/assets/27bbffa0-4c52-4ee5-90bc-9302cabe267c)
+
+![EM_2_bed](https://github.com/user-attachments/assets/e954b2b9-48ca-4bb8-b230-9da26c6d5c79)
+
+![EM_3_bed](https://github.com/user-attachments/assets/9ae6594e-0fd3-442b-aa9e-8d649cd1f686)
 
 ### Further Insights
 Realizing that there are limited insights to be gained from forecasting occupancy rates of shelters that are usually near capacity, we turned our attention towards discovering other interesting behaviours in the data. We tried two main approaches:
